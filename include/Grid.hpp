@@ -13,7 +13,7 @@ class Grid
     {
 
     public:
-        Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed);
+        Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed, bool threaded);
         std::vector<std::uint8_t> m_pixels;
         float m_buoyancy;
         float m_diff_co;
@@ -142,13 +142,12 @@ class Grid
         
         void swapDensity();
         
-        void diffuse_Rows(float dt, const std::vector<float>& source, std::vector<float>& dest, std::size_t begin, std::size_t end);
-        void diffuse_Threaded(float dt, const std::vector<float>& source, std::vector<float>& dest);
+        void diffuse(float dt, const std::vector<float>& source, std::vector<float>& destination);
+        void diffuseJacobi_Rows(float a, const std::vector<float>& source, const std::vector<float>& current, std::vector<float>& next, std::size_t begin, std::size_t end);
+        void diffuse_Threaded(float a, const std::vector<float>& source, const std::vector<float>& current,  std::vector<float>& next);
 
         void diffuseVel_Threaded(float dt);
         void diffuseVel_Rows(float dt, std::size_t begin, std::size_t end);
-
-        void buoyancy(float dt);
 
         void densityToPixels();
 
@@ -157,6 +156,7 @@ class Grid
 
         float density_sample(std::size_t i) const;
         
+        void scalarBoundaries(std::vector<float>& field);
 
         FastNoiseLite m_noise_gen;
 
@@ -203,6 +203,9 @@ class Grid
         std::vector<float> m_density_b;
         std::vector<float> m_u_velocity;
         std::vector<float> m_v_velocity;
+
+        std::vector<float> m_diffusion_scratch;
+        std::size_t m_diffusion_iterations;
 
         std::vector<float>m_density_r_prev;
         std::vector<float>m_density_g_prev;

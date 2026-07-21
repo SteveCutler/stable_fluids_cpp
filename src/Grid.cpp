@@ -8,7 +8,7 @@
 
 
 
-Grid::Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed):
+Grid::Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed, bool threaded):
 
 m_pixels(width * height * 4, std::uint8_t{0}),
 m_buoyancy(50.f),
@@ -17,7 +17,7 @@ m_viscosity(0.05f),
 m_decay(0.994f),
 m_curl_mult(1000),
 m_noise_freq(0.04f),
-m_mult_threaded(false),
+m_mult_threaded(threaded),
 
 m_seed(seed),
 m_width(width),
@@ -47,6 +47,9 @@ m_density_g(width*height, 0.0f),
 m_density_b(width*height, 0.0f),
 m_u_velocity(width*height, 0.0f),
 m_v_velocity(width*height, 0.0f),
+
+m_diffusion_scratch(width*height,0.f),
+m_diffusion_iterations{20},
 
 m_density_r_prev(width*height, 0.0f),
 m_density_g_prev(width*height, 0.0f),
@@ -191,9 +194,9 @@ void Grid::update(float dt){
     //Diffuse
     swapDensity();
     m_performance_clock.restart();
-    m_mult_threaded ? diffuse_Threaded(dt, m_density_r_prev, m_density_r) : diffuse_Rows(dt,m_density_r_prev, m_density_r,1,m_height-1);
-    m_mult_threaded ? diffuse_Threaded(dt, m_density_g_prev, m_density_g) : diffuse_Rows(dt,m_density_g_prev, m_density_g,1,m_height-1);
-    m_mult_threaded ? diffuse_Threaded(dt, m_density_b_prev, m_density_b) : diffuse_Rows(dt,m_density_b_prev, m_density_b,1,m_height-1);
+    diffuse(dt, m_density_r_prev, m_density_r);
+    diffuse(dt, m_density_g_prev, m_density_g);
+    diffuse(dt, m_density_b_prev, m_density_b);
     m_diffuse_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
     velBoundaries();
     
@@ -223,6 +226,39 @@ float Grid::density_sample(std::size_t i) const{
 
     return std::clamp(density, 0.f, 1.f);
 
+}
+
+//helper for handling boundaries of any scalar field
+void Grid::scalarBoundaries(std::vector<float>& field){
+
+    assert(m_width >= 2);
+    assert(m_height >= 2);
+    assert(field.size() == m_width * m_height);
+
+    //left and right boundaries
+    for(std::size_t y = 1; y<m_height -1; y++){
+        const std::size_t row = y*m_width;
+        field[row] = field[row + 1];
+        field[row + m_width-1] = field[row+m_width-2];
+    }
+
+    //top and bottom boundaries
+    for(std::size_t x =1; x<m_width-1; x++){
+        field[x] = field[x+m_width];
+        field[(m_height-1)*m_width +x] = field[(m_height-2)*m_width+x];
+    }
+
+    //top left corner
+    field[0] = (field[1]+field[m_width])*.5f;
+
+    //top right corner
+    field[m_width-1] = (field[(m_width*2-1)]+field[m_width-2])*.5f;
+
+    //bottom left corner
+    field[m_width*(m_height-1)] = (field[m_width*(m_height-1)+1]+field[m_width*(m_height-2)])*.5f;
+
+    //bottom right corner
+    field[m_width*m_height-1] = (field[m_width*m_height-2]+field[m_width*m_height-m_width])*.5f;
 }
 
 void Grid::reset_density(){
@@ -567,7 +603,7 @@ void Grid::diffuseVel_Rows(float dt, std::size_t begin, std::size_t end){
         std::size_t row = y*m_width;
 
         for(std::size_t x = 1; x<m_width-1; x++){
-            //calculate index
+            //calculate indexx
             std::size_t i = row+x; 
 
 
@@ -822,53 +858,65 @@ void Grid::solvePressureThreaded(){
 
 };
 
-void Grid:: diffuse_Threaded(float dt, const std::vector<float>& source, std::vector<float>& dest){
-    Grid::parallelForRows(
+void Grid::diffuse(float dt, const std::vector<float>& source, std::vector<float>& destination){
+const float a = m_diff_co * dt;
+
+//take source field as initial guess
+destination = source;
+
+std::vector<float>* current = &destination;
+std::vector<float>* next = &m_diffusion_scratch;
+
+for(std::size_t iteration = 0;
+iteration < m_diffusion_iterations;
+iteration++){
+
+    if(m_mult_threaded){
+        Grid::parallelForRows(
         1,
         m_height-1,
-        [this, dt, &source, &dest](std::size_t begin, std::size_t end){
-            diffuse_Rows(dt, source, dest, begin, end);
+        [this, a, &source, current, next](std::size_t begin, std::size_t end){
+                diffuseJacobi_Rows(a, source, *current, *next, begin, end);
+                }
+            );
         }
-    );
+        else{
+            diffuseJacobi_Rows(a, source, *current, *next, 1, m_height -1);
+
+        }
+
+        scalarBoundaries(*next);
+        std::swap(current, next);
+    }
+    if (current != &destination) {
+        destination.swap(m_diffusion_scratch);
+    }
 }
 
-void Grid::diffuse_Rows(float dt, const std::vector<float>& source, std::vector<float>& dest, std::size_t begin, std::size_t end){
+
+
+void Grid::diffuseJacobi_Rows(float a, const std::vector<float>& source, const std::vector<float>& current,  std::vector<float>& next, std::size_t begin, std::size_t end){
 
     //5 points diffusion kernel
-    //std::pair<std::size_t,std::size_t> xy = std::pair(0,0);
-    float left = 0.f;
-    float right = 0.f;
-    float up = 0.f;
-    float down = 0.f;
-    //float center = 0.f;
-   // float lap = 0.f;
-    float new_dens = 0.f;
+
+    const float denominator = 1.f + 4.f * a;
 
     for(std::size_t y = begin; y<end; y++){
 
-        std::size_t row = y*m_width;
+        const std::size_t row = y*m_width;
 
         for(std::size_t x = 1; x<m_width-1; x++){
 
-            std::size_t index = row+x;
+            const std::size_t i = row+x;
 
+            const float neighbourSum = 
+                current[i-1] +
+                current[i+1] + 
+                current[i-m_width] + 
+                current[i+m_width];
 
-                //getting data for laplacian
-                left = dest[index-1];
-                right = dest[index+1];
-                up = dest[index-m_width];
-                down = dest[index+m_width];
-             //   center = dest[index];
-
-                //calculate laplacian
-               // lap = left+right+up+down - (4*center);
-
-                //calculate and write new density
-                new_dens = (source[index] + m_diff_co*dt*(left+right+up+down))/(1.f+(4.f*m_diff_co*dt));
-               //// new_dens = (source[index]+ m_diff_co*lap*dt)/1+(4*m_diff_co*dt);
-                dest[index] = new_dens;
-
-                
+            next[i] = 
+            (source[i] + a * neighbourSum)/ denominator;                
 
             }
         }

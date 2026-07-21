@@ -28,6 +28,9 @@ int main()
     constexpr std::size_t stepCount = 300;
     std::size_t steps = 0;
 
+    //mutlithreaded switch
+    bool threaded = true;
+
     //velocity arrow visualization
     bool arrow_viz = false;
     bool paused = false;
@@ -53,7 +56,7 @@ int main()
     };
 
     //OBJECT CREATION
-    Grid grid{width, height, emitters, seed};
+    Grid grid{width, height, emitters, seed, threaded};
     Renderer renderer(width, height, font);
     // create the window
     sf::RenderWindow window(sf::VideoMode({width, height}), "Wind Sim");
