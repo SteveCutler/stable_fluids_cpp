@@ -23,10 +23,10 @@ private:
     sf::Text advectVel;
     sf::Text project;
     sf::Text addSource;   
-    sf::Clock m_clock;
-    sf::Clock m_renderClock;
     sf::Text render;
     sf::Sprite m_sprite;
+    sf::Clock m_clock;
+    sf::Clock m_renderClock;
     
 
 public:

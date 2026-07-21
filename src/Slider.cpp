@@ -1,9 +1,10 @@
-#include "../include/Slider.hpp"
+#include "Slider.hpp"
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 
 sf::Font font;
-bool loaded = font.openFromFile("/Users/stevecutler/Library/Fonts/digital-7 (italic).ttf");
+
+bool loaded = font.openFromFile("./assets/digital-7 (italic).ttf");
 
 
 

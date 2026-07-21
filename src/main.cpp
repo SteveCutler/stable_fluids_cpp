@@ -2,10 +2,10 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include "../include/Renderer.hpp"
-#include "../include/Grid.hpp"
-#include "../include/Slider.hpp"
-#include "../include/Emitter.hpp"
+#include "Renderer.hpp"
+#include "Grid.hpp"
+#include "Slider.hpp"
+#include "Emitter.hpp"
 
 
 
@@ -16,8 +16,8 @@ int main()
     
     
     //SET WIDTH AND HEIGHT
-    unsigned int width = 512;
-    unsigned int height = 512;    
+    unsigned int width = 1024;
+    unsigned int height = 1024;    
     
     //velocity arrow visualization
     bool arrow_viz = false;
@@ -25,16 +25,22 @@ int main()
     
     //Font loading
     sf::Font font;
-    bool loaded = font.openFromFile("/Users/stevecutler/Library/Fonts/digital-7 (italic).ttf");
+    bool loaded = font.openFromFile("./assets/digital-7 (italic).ttf");
+
+    if(!loaded){
+    std::cerr << "Failed to load font\n";
+    return EXIT_FAILURE;
+    }
+
 
     Emitter magenta{sf::Vector2f(width*.3f,height*.8f), 50.f, sf::Vector3f(1.f,0.f,.2f)};
-    //Emitter yellow{sf::Vector2f(width*.5f,height*.8f), 50.f, sf::Vector3f(1.f,1.f,0.f)};
-    //Emitter cyan{sf::Vector2f(width*.7f,height*.8f), 50.f, sf::Vector3f(0.0f,.15f,1.f)};
+    Emitter yellow{sf::Vector2f(width*.5f,height*.8f), 50.f, sf::Vector3f(1.f,1.f,0.f)};
+    Emitter cyan{sf::Vector2f(width*.7f,height*.8f), 50.f, sf::Vector3f(0.0f,.15f,1.f)};
 
     std::vector<Emitter*> emitters{
         &magenta,
-        //&yellow,
-       // &cyan
+        &yellow,
+        &cyan
     };
 
     //OBJECT CREATION

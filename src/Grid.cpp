@@ -1,4 +1,4 @@
-#include "../include/Grid.hpp"
+#include "Grid.hpp"
 #include <vector>
 #include<iostream>
 #include <random>
@@ -9,46 +9,54 @@
 
 
 Grid::Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters):
+
+m_pixels(width * height * 4, std::uint8_t{0}),
+m_buoyancy(50.f),
+m_diff_co(4.5f),
+m_viscosity(0.05f),
+m_decay(0.994f),
+m_curl_mult(1000),
+m_noise_freq(0.04f),
+m_mult_threaded(true),
+
 m_width(width),
 m_height(height),
-m_pixels(width * height * 4, 0),
-m_density_r(width*height, 0.0f),
-m_density_g(width*height, 0.0f),
-m_density_b(width*height, 0.0f),
-m_v_velocity(width*height, 0.0f),
-m_u_velocity(width*height, 0.0f),
-m_density_r_prev(width*height, 0.0f),
-m_density_g_prev(width*height, 0.0f),
-m_density_b_prev(width*height, 0.0f),
-m_v_velocity_prev(width*height, 0.0f),
-m_u_velocity_prev(width*height, 0.0f),
+
+m_vel_decay(0.9f),
 m_source(50.f),
 m_elapsed(0.f),
-m_noise(width*height, 0.0f),
-m_pressure(width*height, 0.0f),
-m_pressure_prev(width*height, 0.0f),
-m_divergence(width*height, 0.0f),
+m_pressure_iter(20),
+
+m_thread_count(4),
+
 m_noise_ms(0.f),
 m_vel_ms(0.f),
 m_div_ms(0.f),
 m_pressure_ms(0.f),
 m_advect_ms(0.f),
 m_diffuse_ms(0.f),
-m_diff_co(4.5f),
-m_decay(0.994f),
-m_vel_decay(0.9f),
-m_viscosity(0.05f),
-m_pressure_iter(20),
 m_advectVel_ms(0.f),
 m_project_ms(0.f),
 m_addSource_ms(0.f),
 m_render_ms(0.f),
-m_thread_count(4),
-m_mult_threaded(true),
-m_buoyancy(50.f),
-m_noise_freq(0.04f),
 m_emitters(emitters),
-m_curl_mult(1000)
+
+m_density_r(width*height, 0.0f),
+m_density_g(width*height, 0.0f),
+m_density_b(width*height, 0.0f),
+m_u_velocity(width*height, 0.0f),
+m_v_velocity(width*height, 0.0f),
+
+m_density_r_prev(width*height, 0.0f),
+m_density_g_prev(width*height, 0.0f),
+m_density_b_prev(width*height, 0.0f),
+m_u_velocity_prev(width*height, 0.0f),
+m_v_velocity_prev(width*height, 0.0f),
+
+m_noise(width*height, 0.0f),
+m_pressure(width*height, 0.0f),
+m_pressure_prev(width*height, 0.0f),
+m_divergence(width*height, 0.0f)
 {
 
     //configure random num gen
@@ -240,7 +248,7 @@ void Grid::projectStep(){
     m_performance_clock.restart();
 
     //switch for turning on multithreaded mode
-    m_mult_threaded ? solvePressureThreaded(m_thread_count) : solvePressure();
+    m_mult_threaded ? solvePressureThreaded() : solvePressure();
 
     m_pressure_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
     pressureBoundaries();
@@ -386,7 +394,7 @@ void Grid::swapDensity(){
 
 void Grid::addSource(size_t x, size_t y, float size, sf::Vector3f clr){
 
-    float radius = size;
+   
     for(int dy = -size; dy<=size; dy++){
         //new y
         std::size_t new_y = (y+dy);
@@ -772,7 +780,7 @@ void Grid::solvePressureRows(std::size_t begin, std::size_t end){
 
 };
 
-void Grid::solvePressureThreaded(std::size_t thread_count){
+void Grid::solvePressureThreaded(){
     std::size_t k = 0;
 
     while(k<m_pressure_iter){
@@ -814,8 +822,8 @@ void Grid::diffuse_Rows(float dt, const std::vector<float>& source, std::vector<
     float right = 0.f;
     float up = 0.f;
     float down = 0.f;
-    float center = 0.f;
-    float lap = 0.f;
+    //float center = 0.f;
+   // float lap = 0.f;
     float new_dens = 0.f;
 
     for(std::size_t y = begin; y<end; y++){
@@ -832,10 +840,10 @@ void Grid::diffuse_Rows(float dt, const std::vector<float>& source, std::vector<
                 right = dest[index+1];
                 up = dest[index-m_width];
                 down = dest[index+m_width];
-                center = dest[index];
+             //   center = dest[index];
 
                 //calculate laplacian
-                lap = left+right+up+down - (4*center);
+               // lap = left+right+up+down - (4*center);
 
                 //calculate and write new density
                 new_dens = (source[index] + m_diff_co*dt*(left+right+up+down))/(1.f+(4.f*m_diff_co*dt));

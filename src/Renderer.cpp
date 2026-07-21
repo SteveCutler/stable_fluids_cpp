@@ -1,14 +1,13 @@
 
-#include "../include/Renderer.hpp"
+#include "Renderer.hpp"
 #include <vector>
 
 Renderer::Renderer(unsigned int width, unsigned int height, sf::Font& font):
 m_width(width),
 m_height(height),
 m_texture(sf::Vector2u(width, height)),
-m_scale(sf::Vector2f(1.0f, 1.0f)),
-m_sprite(m_texture),
 m_arrows(sf::PrimitiveType::Lines, width/16 * height/16 * 6),
+m_scale(sf::Vector2f(1.0f, 1.0f)),
 fpsText(font),
 msText(font),
 noise(font),
@@ -20,7 +19,8 @@ advect(font),
 advectVel(font),
 project(font),
 addSource(font),
-render(font)
+render(font),
+m_sprite(m_texture)
 {
 
 

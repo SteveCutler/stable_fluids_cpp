@@ -126,7 +126,7 @@ class Grid
         
         //multi threaded implementation
         void solvePressureRows(std::size_t begin, std::size_t end);
-        void solvePressureThreaded(std::size_t thread_count);
+        void solvePressureThreaded();
         
         void velBoundaries();
         
@@ -166,8 +166,8 @@ class Grid
     private:
 
         //Global variables
-        int m_width;
-        int m_height;
+        std::size_t m_width;
+        std::size_t m_height;
         
         float m_vel_decay;
         float m_source;

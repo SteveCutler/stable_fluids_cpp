@@ -1,4 +1,4 @@
-#include "../include/Emitter.hpp"
+#include "Emitter.hpp"
 
 Emitter::Emitter(sf::Vector2f pos, float rad, sf::Vector3f clr):
 m_pos(pos),
