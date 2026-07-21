@@ -36,12 +36,12 @@ int main()
 
 
     Emitter magenta{sf::Vector2f(width*.3f,height*.8f), 50.f, sf::Vector3f(1.f,0.f,.2f)};
-    Emitter yellow{sf::Vector2f(width*.5f,height*.8f), 50.f, sf::Vector3f(1.f,1.f,0.f)};
+    Emitter white{sf::Vector2f(width*.5f,height*.8f), 50.f, sf::Vector3f(1.f,1.f,1.f)};
     Emitter cyan{sf::Vector2f(width*.7f,height*.8f), 50.f, sf::Vector3f(0.0f,.15f,1.f)};
 
     std::vector<Emitter*> emitters{
         &magenta,
-        &yellow,
+        &white,
         &cyan
     };
 

@@ -154,7 +154,7 @@ class Grid
         void gen_pixels_Threaded();
         void gen_pixels_Rows(std::size_t begin, std::size_t end);
 
-        float density_sample(std::size_t i);
+        float density_sample(std::size_t i) const;
         
 
         FastNoiseLite m_noise_gen;

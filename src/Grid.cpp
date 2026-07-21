@@ -214,10 +214,14 @@ void Grid::update(float dt){
 
 //HELPERS
 
-float Grid::density_sample(std::size_t i){
-    constexpr float scaler = 1.f/3.f;
+float Grid::density_sample(std::size_t i) const{
+    const float density = std::max({
+        m_density_r[i],
+        m_density_g[i],
+        m_density_b[i]
+    });
 
-    return std::clamp(((m_density_b[i]+m_density_r[i]+m_density_g[i])*scaler),0.f,1.f);
+    return std::clamp(density, 0.f, 1.f);
 
 }
 
@@ -324,25 +328,27 @@ void Grid::clearPressure(){
 
 
 void Grid::calcNoise_Threaded(float dt){
-   // m_elapsed += dt;
+    m_elapsed += dt*10.f;
     m_noise_gen.SetFrequency(m_noise_freq);
 
+    const float sample_time = m_elapsed;
+
     parallelForRows(0, m_height,
-        [this, dt](std::size_t begin, std::size_t end){
-            calcNoiseRows(dt, begin, end);
+        [this, sample_time](std::size_t begin, std::size_t end){
+            calcNoiseRows(sample_time, begin, end);
         });
 
 };
 
 void Grid::calcNoiseRows(float dt, std::size_t begin, std::size_t end){
-    m_elapsed +=dt*10;
+    //m_elapsed +=dt*10;
 
     std::size_t index = begin*m_width;
 
     for(std::size_t y = begin; y<end; y++){
          for(std::size_t x = 0; x<m_width; x++){
             
-            float n = m_noise_gen.GetNoise(x*1.f,y*1.f, m_elapsed);
+            float n = m_noise_gen.GetNoise(x*1.f,y*1.f, dt);
             m_noise[index] = n;
             index++;
         }
