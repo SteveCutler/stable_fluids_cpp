@@ -14,7 +14,9 @@
 int main()
 {
     
-    
+    //Set Seed
+    constexpr int seed = 42;
+
     //SET WIDTH AND HEIGHT
     unsigned int width = 1024;
     unsigned int height = 1024;    
@@ -44,7 +46,7 @@ int main()
     };
 
     //OBJECT CREATION
-    Grid grid{width, height, emitters};
+    Grid grid{width, height, emitters, seed};
     Renderer renderer(width, height, font);
     // create the window
     sf::RenderWindow window(sf::VideoMode({width, height}), "Wind Sim");

@@ -8,7 +8,7 @@
 
 
 
-Grid::Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters):
+Grid::Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed):
 
 m_pixels(width * height * 4, std::uint8_t{0}),
 m_buoyancy(50.f),
@@ -19,6 +19,7 @@ m_curl_mult(1000),
 m_noise_freq(0.04f),
 m_mult_threaded(true),
 
+m_seed(seed),
 m_width(width),
 m_height(height),
 
@@ -59,14 +60,14 @@ m_pressure_prev(width*height, 0.0f),
 m_divergence(width*height, 0.0f)
 {
 
-    //configure random num gen
-    std::random_device rd;
-    std::mt19937 gen(rd()); 
-    std::uniform_int_distribution<int> distr(1, 100);
+    //configuration for random seed if desired
+    // std::random_device rd;
+    // std::mt19937 gen(rd()); 
+    // std::uniform_int_distribution<int> distr(1, 100);
 
     //configure noise generator
     m_noise_gen.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    m_noise_gen.SetSeed(distr(gen));
+    m_noise_gen.SetSeed(seed);
 
 }
 

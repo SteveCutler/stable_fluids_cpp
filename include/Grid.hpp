@@ -13,7 +13,7 @@ class Grid
     {
 
     public:
-        Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters);
+        Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed);
         std::vector<std::uint8_t> m_pixels;
         float m_buoyancy;
         float m_diff_co;
@@ -166,6 +166,7 @@ class Grid
     private:
 
         //Global variables
+        int m_seed;
         std::size_t m_width;
         std::size_t m_height;
         
