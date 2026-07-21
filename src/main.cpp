@@ -18,9 +18,16 @@ int main()
     constexpr int seed = 42;
 
     //SET WIDTH AND HEIGHT
-    unsigned int width = 1024;
-    unsigned int height = 1024;    
+    constexpr unsigned int width = 1024;
+    constexpr unsigned int height = 1024;    
     
+    //timestep
+    constexpr float dt = 1/15.f;
+
+    //Step Count for validation
+    constexpr std::size_t stepCount = 300;
+    std::size_t steps = 0;
+
     //velocity arrow visualization
     bool arrow_viz = false;
     bool paused = false;
@@ -113,12 +120,20 @@ int main()
     multithreadControl.setFillColor(sf::Color::White);
     multithreadControl.setPosition({width-width*.35f, (height-height*0.14f)});
     renderer.setString(multithreadControl,"Press 'M' to toggle Multithreaded");
+
+    sf::Text stepDisplay(font);
+    stepDisplay.setCharacterSize(12);
+    stepDisplay.setFillColor(sf::Color::White);
+    stepDisplay.setPosition({width-width*.5f, (height-height*0.95f)});
+    
     
     std::vector<sf::Text> Instructions{
         pauseControl,
         resetControl,
         arrowsControl,
         multithreadControl
+       
+
     };
 
 
@@ -188,17 +203,20 @@ int main()
 
         //calculate dt
         //float dt = clock.restart().asSeconds();
-        float dt = 1/15.f;
+        
 
         // UPDATE //
         ////
-        if(!paused){
+        if(!paused && steps<stepCount){
             grid.update(dt);
-        }
-        if(!paused){
             renderer.update(grid,arrow_viz);
+            steps++;
+            
         }
 
+        renderer.setString(stepDisplay,"Step Count: " + std::to_string(steps));
+
+        
         // DRAW BLOCK
         
         // clear window
@@ -215,6 +233,7 @@ int main()
         for( auto& instruction : Instructions){
             window.draw(instruction);
         }
+        window.draw(stepDisplay);
 
         // display
         window.display();

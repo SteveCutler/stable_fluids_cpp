@@ -112,6 +112,7 @@ class Grid
         
         void clearPressure();
         
+        void calcNoise(float dt);
         void calcNoise_Threaded(float dt);
         void calcNoiseRows(float dt, std::size_t begin, std::size_t end);
         

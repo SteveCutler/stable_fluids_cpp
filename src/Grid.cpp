@@ -17,7 +17,7 @@ m_viscosity(0.05f),
 m_decay(0.994f),
 m_curl_mult(1000),
 m_noise_freq(0.04f),
-m_mult_threaded(true),
+m_mult_threaded(false),
 
 m_seed(seed),
 m_width(width),
@@ -145,7 +145,7 @@ void Grid::update(float dt){
 
     //Create noise scalar field
     m_performance_clock.restart();
-    m_mult_threaded ? calcNoise_Threaded(dt) : calcNoiseRows(dt, 0, m_height);
+    calcNoise(dt);
 
     m_noise_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
     
@@ -327,11 +327,23 @@ void Grid::clearPressure(){
 };
 
 
-void Grid::calcNoise_Threaded(float dt){
-    m_elapsed += dt*10.f;
+void Grid::calcNoise(float dt){
+    m_elapsed += dt*10.f;   
+
     m_noise_gen.SetFrequency(m_noise_freq);
 
     const float sample_time = m_elapsed;
+
+    if(m_mult_threaded){
+        calcNoise_Threaded(sample_time);
+    }
+    else{
+        calcNoiseRows(sample_time,0,m_height);
+    }
+}
+
+void Grid::calcNoise_Threaded(float sample_time){
+    
 
     parallelForRows(0, m_height,
         [this, sample_time](std::size_t begin, std::size_t end){
@@ -341,7 +353,6 @@ void Grid::calcNoise_Threaded(float dt){
 };
 
 void Grid::calcNoiseRows(float dt, std::size_t begin, std::size_t end){
-    //m_elapsed +=dt*10;
 
     std::size_t index = begin*m_width;
 
