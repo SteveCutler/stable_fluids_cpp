@@ -155,7 +155,7 @@ void Grid::update(float dt){
     
     //Create vel gradient field based on noise
     m_performance_clock.restart();
-    m_mult_threaded ? calcVel_Threaded(dt) : calcVel_Rows(dt, 0, m_height);
+    m_mult_threaded ? calcVel_Threaded(dt) : calcVel_Rows(dt, 1, m_height-1);
 
     m_vel_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
     
@@ -172,7 +172,7 @@ void Grid::update(float dt){
     
     //Diffuse velocity
     swapVel();
-    m_mult_threaded ? diffuseVel_Threaded(dt) : diffuseVel_Rows(dt,0,m_height-1);  
+    m_mult_threaded ? diffuseVel_Threaded(dt) : diffuseVel_Rows(dt,1,m_height-1);  
     velBoundaries();
 
     //second pressure solve
@@ -198,14 +198,16 @@ void Grid::update(float dt){
     diffuse(dt, m_density_g_prev, m_density_g);
     diffuse(dt, m_density_b_prev, m_density_b);
     m_diffuse_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
-    velBoundaries();
     
     //Advect
     swapDensity();
     m_performance_clock.restart();
-    m_mult_threaded ? advect_decay_Threaded(dt, m_density_r_prev, m_density_r) : advect_decay_Rows(dt, m_density_r_prev, m_density_r, 0,m_height-1);
-    m_mult_threaded ? advect_decay_Threaded(dt, m_density_g_prev, m_density_g) : advect_decay_Rows(dt, m_density_g_prev, m_density_g, 0,m_height-1);
-    m_mult_threaded ? advect_decay_Threaded(dt, m_density_b_prev, m_density_b) : advect_decay_Rows(dt, m_density_b_prev, m_density_b, 0,m_height-1);
+    m_mult_threaded ? advect_decay_Threaded(dt, m_density_r_prev, m_density_r) : advect_decay_Rows(dt, m_density_r_prev, m_density_r, 1,m_height-1);
+    m_mult_threaded ? advect_decay_Threaded(dt, m_density_g_prev, m_density_g) : advect_decay_Rows(dt, m_density_g_prev, m_density_g, 1,m_height-1);
+    m_mult_threaded ? advect_decay_Threaded(dt, m_density_b_prev, m_density_b) : advect_decay_Rows(dt, m_density_b_prev, m_density_b, 1,m_height-1);
+    scalarBoundaries(m_density_r);
+    scalarBoundaries(m_density_g);
+    scalarBoundaries(m_density_b);
     m_advect_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
 
     //generate pixels
@@ -282,7 +284,13 @@ void Grid::reset_density(){
 void Grid::projectStep(){
     //clearPressure();
     m_performance_clock.restart();
-    calcDivergence_Threaded();
+    if(m_mult_threaded){
+        calcDivergence_Threaded();
+    }
+    else{
+        calcDivergence_Rows(1,m_height-1);
+    }
+
     m_div_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
     
     
@@ -295,7 +303,13 @@ void Grid::projectStep(){
     pressureBoundaries();
     
     //m_performance_clock.restart();
-    project_Threaded();
+    if(m_mult_threaded){
+        project_Threaded();
+    }
+    else{
+        project_Rows(1,m_height-1);
+    }
+
     velBoundaries();
 
 }
@@ -487,8 +501,8 @@ void Grid::addSource(size_t x, size_t y, float size, sf::Vector3f clr){
 
 void Grid::advectVel_Threaded(float dt){
     Grid::parallelForRows(
-        0,
-        m_height,
+        1,
+        m_height-1,
         [this, dt](std::size_t begin, std::size_t end){
             advectVel_Rows(dt, begin, end);
         }
@@ -867,9 +881,8 @@ destination = source;
 std::vector<float>* current = &destination;
 std::vector<float>* next = &m_diffusion_scratch;
 
-for(std::size_t iteration = 0;
-iteration < m_diffusion_iterations;
-iteration++){
+//iteration loop
+for(std::size_t iteration = 0; iteration < m_diffusion_iterations; iteration++){
 
     if(m_mult_threaded){
         Grid::parallelForRows(
@@ -925,13 +938,13 @@ void Grid::diffuseJacobi_Rows(float a, const std::vector<float>& source, const s
 
 void Grid::advect_decay_Threaded(float dt, const std::vector<float>& source, std::vector<float>& dest){
     Grid::parallelForRows(
-        0,
-        m_height,
+        1,
+        m_height-1,
         [this, dt, &source, &dest](std::size_t begin, std::size_t end){
             advect_decay_Rows(dt, source, dest, begin, end);
         }
     );
-    //included decay here to minimize operations
+    
     
 }
 

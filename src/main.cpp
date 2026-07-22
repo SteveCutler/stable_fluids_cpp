@@ -24,9 +24,6 @@ int main()
     //timestep
     constexpr float dt = 1/15.f;
 
-    //Step Count for validation
-    constexpr std::size_t stepCount = 300;
-    std::size_t steps = 0;
 
     //mutlithreaded switch
     bool threaded = true;
@@ -65,7 +62,6 @@ int main()
     
     
     //SLIDER UI//
-    ////
 
     //Grabbing slider controlled variable references
     float* buoyancy = &grid.m_buoyancy;
@@ -202,22 +198,13 @@ int main()
             active_slider->updateFromMouse(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
         }
         
-        
-
-        //calculate dt
-        //float dt = clock.restart().asSeconds();
-        
 
         // UPDATE //
-        ////
-        if(!paused && steps<stepCount){
+        if(!paused){
             grid.update(dt);
             renderer.update(grid,arrow_viz);
-            steps++;
             
         }
-
-        renderer.setString(stepDisplay,"Step Count: " + std::to_string(steps));
 
         
         // DRAW BLOCK
