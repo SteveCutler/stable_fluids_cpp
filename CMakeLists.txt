@@ -33,6 +33,35 @@ target_link_libraries(fluid_core
 )
 
 # ------------------------------------------------------------
+# Tsan flag setup
+# ------------------------------------------------------------
+
+option (ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+
+if(ENABLE_TSAN)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
+        message(FATAL_ERROR
+            "ThreadSanitizer requires Clang, AppleClang, or GCC"
+            )
+    endif()
+
+    add_library(tsan_flags INTERFACE)
+
+    target_compile_options(tsan_flags INTERFACE
+        -fsanitize=thread
+        -fno-omit-frame-pointer
+        )
+
+    target_link_options(tsan_flags INTERFACE
+        -fsanitize=thread
+        )
+
+    target_link_libraries(fluid_core PUBLIC tsan_flags)
+endif()
+
+
+
+# ------------------------------------------------------------
 # Main application
 # ------------------------------------------------------------
 
