@@ -9,7 +9,7 @@ The current CPU version runs an interactive `1024 × 1024` simulation with colou
 density transport, configurable emitters, and live controls for the major
 simulation parameters.
 
-Image
+<img width="1019" height="1017" alt="Screenshot 2026-07-25 at 8 19 43 AM" src="https://github.com/user-attachments/assets/d2bd0658-17db-4171-81f7-a921710ac069" />
 
 ## Current features
 
