@@ -98,6 +98,24 @@ target_link_libraries(cpu_parity
         fluid_core
 )
 
+
+# ------------------------------------------------------------
+# Projection test
+# ------------------------------------------------------------
+
+add_executable(projection_test
+    Tests/projection_test.cpp
+)
+
+target_link_libraries(projection_test
+    PRIVATE
+        fluid_core
+)
+
+# ------------------------------------------------------------
+# Register tests with CTest
+# ------------------------------------------------------------
+
 enable_testing()
 
 add_test(
@@ -105,6 +123,10 @@ add_test(
     COMMAND cpu_parity
 )
 
+add_test(
+    NAME projection_test
+    COMMAND projection_test
+)
 
 # ------------------------------------------------------------
 # Compiler warnings
@@ -125,6 +147,11 @@ if(MSVC)
         /W4
         /permissive-
     )
+    target_compile_options(projection_test PRIVATE
+        /W4
+        /permissive-
+    )
+
 else()
     target_compile_options(fluid_core PRIVATE
         -Wall
@@ -139,6 +166,12 @@ else()
     )
 
     target_compile_options(cpu_parity PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+    )
+
+    target_compile_options(projection_test PRIVATE
         -Wall
         -Wextra
         -Wpedantic

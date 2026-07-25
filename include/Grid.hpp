@@ -8,6 +8,13 @@
 #include "../include/Emitter.hpp"
 #include <thread>
 
+//Divergence measurement test struct
+struct DivergenceStats {
+    double rms =0.0;
+    double maximumAbsolute = 0.0;
+    bool allFinite = true;
+};
+
 
 class Grid
     {
@@ -84,6 +91,16 @@ class Grid
 
         const std::vector<std::uint8_t> & get_pixels() const;
 
+        // vel field setter for test purposes
+        void setVelocityAt(std::size_t x, std::size_t y, float u,float v);
+
+        //divergence stats test capture function
+        [[nodiscard]] DivergenceStats measureDivergence() const;
+
+        //moved to public for divergence test purposes
+        void projectStep();
+
+
         //timing getters
         sf::Clock m_performance_clock;
         float time_noise() const;
@@ -98,6 +115,9 @@ class Grid
 
 
     private:
+
+        [[nodiscard]] float divergenceAt(std::size_t x, std::size_t y) const;
+
         size_t calcPos(size_t x, size_t y);
         
         void advect_decay_Threaded(float dt, const std::vector<float>& source, std::vector<float>& dest);
@@ -136,7 +156,6 @@ class Grid
         void project_Threaded();
         void project_Rows(std::size_t begin, std::size_t end);
         
-        void projectStep();
         
         void addSource(size_t x, size_t y, float size, sf::Vector3f clr);
         

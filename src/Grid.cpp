@@ -4,8 +4,7 @@
 #include <random>
 #include <thread>
 #include <algorithm>
-
-
+#include <cmath>
 
 
 Grid::Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed, bool threaded):
@@ -219,6 +218,73 @@ void Grid::update(float dt){
 
 //HELPERS
 
+//measure divergence at x y
+float Grid::divergenceAt(std::size_t x, std::size_t y) const{
+    
+    std::size_t row = m_width*y;
+    std::size_t index = row+x;
+
+    float xl = m_u_velocity[index-1];
+    float xr = m_u_velocity[index+1];
+    float yt = m_v_velocity[index-m_width];
+    float yb = m_v_velocity[index+m_width];
+
+    float div =  ((xr-xl)*.5)+((yb-yt)*.5);
+
+    return div;
+}
+
+//measure divergence loop for test purposes
+DivergenceStats Grid::measureDivergence() const{
+
+    DivergenceStats stats;
+
+    double squaredSum = 0.0;
+    std::size_t sampleCount = 0;
+
+    for(std::size_t x = 1; x<m_width-1; x++){
+        for(std::size_t y = 1; y<m_height-1; y++){
+            //calculating divergence at grid cell
+            const double value = static_cast<double>(divergenceAt(x,y));
+
+            //finite number check
+            if(!std::isfinite(value)){
+                stats.allFinite = false;
+                continue;
+            }
+
+            // adding to squared sum
+            squaredSum +=value*value;
+
+            //check if current value is greatest abs squared divergence
+            stats.maximumAbsolute = std::max(stats.maximumAbsolute, std::abs(value));
+
+            sampleCount ++;
+
+        }
+
+        if(sampleCount>0){
+            stats.rms=std::sqrt(squaredSum/static_cast<double>(sampleCount));
+        }
+
+        
+    }
+    return stats;
+
+}
+
+void Grid::setVelocityAt(std::size_t x, std::size_t y, float u, float v){
+
+    if(x>=m_width || y>=m_height){
+        throw std::out_of_range("Velocity position outside of grid");
+    }
+
+    const std::size_t index = y*m_width +x;
+    
+    m_u_velocity[index] = u;
+    m_v_velocity[index] = v;
+}
+
 float Grid::density_sample(std::size_t i) const{
     const float density = std::max({
         m_density_r[i],
@@ -354,7 +420,7 @@ void Grid::pressureBoundaries(){
         std::size_t b_r = (m_width-1)+y*m_width;
 
 
-        //pressure refers to neighbour
+        //pressure refers to x
         m_pressure[b_l] = m_pressure[b_l+1];
         m_pressure[b_r] = m_pressure[b_r-1];
     }
@@ -717,7 +783,7 @@ void Grid::calcDivergence_Threaded(){
 }
 void Grid::calcDivergence_Rows(std::size_t begin, std::size_t end){
 
-    float max_div = 0.f;
+   
     
     for(std::size_t y =begin; y<end; y++){
         //calc row once per line
@@ -733,9 +799,9 @@ void Grid::calcDivergence_Rows(std::size_t begin, std::size_t end){
                     float yt = m_v_velocity[index-m_width];
                     float yb = m_v_velocity[index+m_width];
 
-                    float div =  ((xr-xl)/2)+((yb-yt)/2);
+                    float div =  ((xr-xl)*.5)+((yb-yt)*.5);
 
-                    max_div = std::max(max_div, abs(div));
+                   
 
                     m_divergence[index] = div;
                 
