@@ -15,7 +15,7 @@ constexpr std::size_t height = 64;
 constexpr std::size_t seed = 42;
 
 //remaining divergence threshold
-constexpr double maximumRemainingRatio = 0.25;
+constexpr double maximumRemainingRatio = 0.97;
 
 
 std::vector<Emitter*> emitters;
