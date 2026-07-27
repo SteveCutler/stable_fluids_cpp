@@ -155,8 +155,7 @@ ctest --test-dir build/tsan --output-on-failure
 
 -   Pressure is solved with a fixed budget of 20 Jacobi iterations. This is
     inexpensive per iteration and straightforward to parallelize, but it
-    converges slowly on smooth, low frequency divergence. In the future will impliment
-    a better solution
+    converges slowly on smooth, low frequency divergence. I'm planning a faster pressure solver for a later version
 -   The solver is currently two-dimensional and CPU-only.
 -   CPU workers are currently created and joined for each parallel stage rather
     than being managed by a persistent thread pool.
