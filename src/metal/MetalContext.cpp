@@ -1,20 +1,18 @@
 #include "MetalContext.hpp"
 #include <iostream>
 
+//Metal Context creates and owns the key persisting metal objects: device, command queue and library
+
 MetalContext::MetalContext(std::string library):
 m_library_name(library){
 
     //Intialize metal device
-    
-    NS::AutoreleasePool* autoreleasePool =
-        NS::AutoreleasePool::alloc()->init();
 
     m_device = MTL::CreateSystemDefaultDevice();
 
 
     if (m_device == nullptr) {
         std::cerr << "Error: no Metal device found.\n";
-        autoreleasePool->release();
         return;
     }
 
@@ -30,7 +28,6 @@ m_library_name(library){
 
     if (m_commandqueue == nullptr) {
         std::cerr << "Error creating command queue.\n";
-        autoreleasePool->release();
         return;
     }
     
@@ -51,7 +48,7 @@ m_library_name(library){
         m_device->newLibrary(libraryURL, &error);
 
     if (m_library == nullptr) {
-        std::cerr << "Error loading FluidKernels.metallib";
+        std::cerr << "Error loading: " << library << std::endl;
 
         if (error != nullptr) {
             std::cerr << ": "
@@ -61,14 +58,16 @@ m_library_name(library){
         std::cerr << '\n';
 
         m_device->release();
-        autoreleasePool->release();
         return;
     }
     
 }
 
+//method to turn the metal functions into compute pipeline states that get encoded
+
 MTL::ComputePipelineState* MetalContext::CreatePipelineState(std::string kernel_name, NS::Error* error){
 
+    //search for metal function name in library
     MTL::Function* function = m_library->newFunction(
         NS::String::string(
             kernel_name.c_str(),
@@ -81,9 +80,10 @@ MTL::ComputePipelineState* MetalContext::CreatePipelineState(std::string kernel_
         
         m_library->release();
         m_device->release();
-        return;
+        return nullptr;
     }
 
+    //create pipeline state out of function
     MTL::ComputePipelineState* pipeline = 
         m_device->newComputePipelineState(function, &error);
     
@@ -95,9 +95,8 @@ MTL::ComputePipelineState* MetalContext::CreatePipelineState(std::string kernel_
             }
 
             function->release();
-            m_library->release();
-            m_device->release();
-            return;
+           
+            return nullptr;
         }
 
     function->release();
@@ -126,7 +125,3 @@ MTL::Device* MetalContext::get_device(){
 MTL::CommandQueue* MetalContext::get_commandqueue(){
     return m_commandqueue;
 }
-
-
-//MTL::CommandQueue* m_commandqueue = MTL::Create
-//MTL::Library* m_library = MTL::Lib

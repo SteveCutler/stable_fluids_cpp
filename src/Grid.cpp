@@ -67,7 +67,7 @@ m_divergence(width*height, 0.0f)
     // std::mt19937 gen(rd()); 
     // std::uniform_int_distribution<int> distr(1, 100);
 
-    //configure noise generator
+    //configure reproducible noise generator
     m_noise_gen.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     m_noise_gen.SetSeed(seed);
 

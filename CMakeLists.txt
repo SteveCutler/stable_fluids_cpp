@@ -24,6 +24,8 @@ add_library(fluid_metal
     src/metal/MetalGrid.cpp
     src/metal/MetalImplementation.cpp
     src/metal/MetalContext.cpp
+    src/metal/MetalMain.cpp
+    src/metal/MetalRenderer.cpp
 )
 
 target_include_directories(fluid_core
@@ -35,6 +37,7 @@ target_include_directories(fluid_metal
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/external/metal-cpp-main
         ${CMAKE_CURRENT_SOURCE_DIR}/include/metal
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 
@@ -50,6 +53,11 @@ find_library(METAL_FRAMEWORK Metal REQUIRED)
 find_library(FOUNDATION_FRAMEWORK Foundation REQUIRED)
 
 target_link_libraries(fluid_metal
+
+    PUBLIC
+        SFML::Graphics
+        SFML::Window
+        SFML::System
     PRIVATE
         ${METAL_FRAMEWORK}
         ${FOUNDATION_FRAMEWORK}
@@ -90,7 +98,7 @@ endif()
 
 
 add_executable(StableFluidsC++ 
-src/main.cpp
+src/metal/MetalMain.cpp
 src/Slider.cpp
 src/Renderer.cpp
 )

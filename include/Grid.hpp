@@ -79,8 +79,6 @@ class Grid
         
         void reset_density();
 
-        std::pair<std::size_t,std::size_t> get_xy(std::size_t i);
-
         //field getters
         const std::vector<float>& density_r() const;
         const std::vector<float>& density_g() const;
