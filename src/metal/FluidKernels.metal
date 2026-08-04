@@ -25,7 +25,7 @@ kernel void buoyancy(
                 densityB[index])
     );
     
-    v_velocity[index] -= buoyancy * clamp(value, 0.f, 1.f) * dt ;
+    v_velocity[index] -= buoyancy * dt ;
 }
 
 kernel void  emitter(
@@ -49,8 +49,8 @@ kernel void  emitter(
     int dy = int(local.y) - radius;
 
     //actualy grid coordinates
-    int gridX = center_x+dx;
-    int gridY = center_y+dy;
+    int gridX = int(center_x)+dx;
+    int gridY = int(center_y)+dy;
 
 
     //out of boundary check
