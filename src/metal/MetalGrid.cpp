@@ -82,28 +82,28 @@ MetalGrid::MetalGrid(
         m_noise_gen.SetSeed(seed);
 
         //load compute pipeline kernels
-        m_buoyancyKernel = m_metalcontext.CreatePipelineState("buoyancy", error);
+        m_buoyancyKernel = m_metalcontext.CreatePipelineState("buoyancy");
     
         if(m_buoyancyKernel == nullptr){
             std::cerr << "problem creating buoyancy kernel" << std::endl;
             return; 
         }
 
-        m_densityDecaykernel = m_metalcontext.CreatePipelineState("density_decay", error);
+        m_densityDecaykernel = m_metalcontext.CreatePipelineState("density_decay");
     
         if(m_densityDecaykernel == nullptr){
             std::cerr << "problem creating density decay kernel" << std::endl;
             return; 
         }
 
-        m_emitterKernel = m_metalcontext.CreatePipelineState("emitter", error);
+        m_emitterKernel = m_metalcontext.CreatePipelineState("emitter");
     
         if(m_emitterKernel == nullptr){
             std::cerr << "problem creating emitter kernel" << std::endl;
             return; 
         }
         
-        m_pixelKernel = m_metalcontext.CreatePipelineState("gen_pixels", error);
+        m_pixelKernel = m_metalcontext.CreatePipelineState("gen_pixels");
     
         if(m_pixelKernel == nullptr){
             std::cerr << "problem creating gen pixels kernel" << std::endl;

@@ -25,6 +25,10 @@ int main()
     //timestep
     constexpr float dt = 1/15.f;
 
+    //autorelease pool
+    NS::AutoreleasePool* pool =
+        NS::AutoreleasePool::alloc()->init();
+
 
     //mutlithreaded switch
     bool threaded = true;
@@ -55,6 +59,8 @@ int main()
 
     //OBJECT CREATION
     MetalContext metalcontext{"build/FluidKernels.metallib"};
+
+    
     MetalGrid metalgrid{width, height, cellCount, bytesize, emitters, seed, metalcontext};
     MetalRenderer renderer(width, height, font);
     // create the window
@@ -138,12 +144,12 @@ int main()
     };
 
 
+    auto* framePool = NS::AutoreleasePool::alloc()->init();
 
     // run the main loop
     while (window.isOpen())
     {
         //initialize frame autopool
-        auto* framePool = NS::AutoreleasePool::alloc()->init();
         
 
         // handle events
@@ -234,8 +240,9 @@ int main()
         window.display();
 
         //release frame autopool
-        framePool->release();
     }
 }
+
+framePool->release();
 return 0;
 }

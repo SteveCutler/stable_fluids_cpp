@@ -44,7 +44,7 @@ m_library_name(library){
     NS::URL* libraryURL =
         NS::URL::fileURLWithPath(libraryPath);
 
-    MTL::Library* m_library =
+    m_library =
         m_device->newLibrary(libraryURL, &error);
 
     if (m_library == nullptr) {
@@ -60,28 +60,51 @@ m_library_name(library){
         m_device->release();
         return;
     }
-    
+
+    std::cout << "loaded library...\n" << std::endl;
+    std::cout << "Available Metal functions:\n";
+
+    NS::Array* functionNames = m_library->functionNames();
+
+    for (NS::UInteger i = 0; i < functionNames->count(); ++i) {
+        NS::String* name =
+            functionNames->object<NS::String>(i);
+
+        std::cout << "  " << name->utf8String() << '\n';
+    }
 }
 
 //method to turn the metal functions into compute pipeline states that get encoded
 
-MTL::ComputePipelineState* MetalContext::CreatePipelineState(std::string kernel_name, NS::Error* error){
+MTL::ComputePipelineState* MetalContext::CreatePipelineState(const std::string& kernel){
 
-    //search for metal function name in library
-    MTL::Function* function = m_library->newFunction(
-        NS::String::string(
-            kernel_name.c_str(),
-            NS::UTF8StringEncoding
-        )
-    );
-
-    if(function == nullptr){
-        std::cerr << "Error: kernel " << kernel_name << " was not found. \n";
-        
-        m_library->release();
-        m_device->release();
+    if (m_library == nullptr) {
+        std::cerr << "Metal library is null\n";
         return nullptr;
     }
+
+    NS::Error* error = nullptr;
+   
+    //convert name to NS::string type
+    NS::String* functionName =
+    NS::String::string(
+        kernel.c_str(),
+        NS::UTF8StringEncoding
+    );
+    
+    
+    //search for metal function name in library
+    MTL::Function* function = m_library->newFunction(functionName);
+
+    functionName->release();
+    
+   
+    if(function == nullptr){
+        std::cerr << "Error: kernel " << kernel << " was not found. \n";
+        
+        return nullptr;
+    }
+  
 
     //create pipeline state out of function
     MTL::ComputePipelineState* pipeline = 
