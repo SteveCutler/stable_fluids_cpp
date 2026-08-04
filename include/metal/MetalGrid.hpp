@@ -64,6 +64,7 @@ class MetalGrid
         void encodeDecay(MTL::ComputeCommandEncoder* encoder);
         void encodeEmitter(MTL::ComputeCommandEncoder* encoder, Emitter* emitter);
         void encodePixels(MTL::ComputeCommandEncoder* encoder);
+        void encodeDensityAdvection(MTL::ComputeCommandEncoder* encoder, float dt);
         
         
 
@@ -144,9 +145,9 @@ class MetalGrid
 
         //metal kernels
         MTL::ComputePipelineState* m_buoyancyKernel;
-        MTL::ComputePipelineState* m_densityDecaykernel;
         MTL::ComputePipelineState* m_emitterKernel;
         MTL::ComputePipelineState* m_pixelKernel;
+        MTL::ComputePipelineState* m_advectKernel;
         
         //Threading Variables
         std::size_t m_thread_count;

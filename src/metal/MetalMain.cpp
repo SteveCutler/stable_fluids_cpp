@@ -142,12 +142,12 @@ int main()
     };
 
 
-    auto* framePool = NS::AutoreleasePool::alloc()->init();
     
     // run the main loop
     while (window.isOpen())
     {
         //initialize frame autopool
+        auto* framePool = NS::AutoreleasePool::alloc()->init();
         
         
         // handle events
@@ -238,9 +238,9 @@ int main()
         window.display();
 
         //release frame autopool
+        framePool->release();
     }
 
 
-framePool->release();
 return 0;
 }
