@@ -63,8 +63,8 @@ kernel void  emitter(
     {     
 
     //turn the local coordinates into offset that can be applied around the center of the emitter
-    int dx = int(local.x) - bound;
-    int dy = int(local.y) - bound;
+    int dx = int(local.x) - radius;
+    int dy = int(local.y) - radius;
 
     //actualy grid coordinates
     int gridX = center_x+dx;
@@ -104,7 +104,7 @@ kernel void gen_pixels(
     device const float* densityR [[buffer(0)]],
     device const float* densityG [[buffer(1)]],
     device const float* densityB [[buffer(2)]],
-    device float* pixels         [[buffer(3)]],
+    device uchar4* pixels         [[buffer(3)]],
     device const uint& cellcount [[buffer(4)]],
     uint index                   [[thread_position_in_grid]])
 {
@@ -118,16 +118,14 @@ kernel void gen_pixels(
     
     
     //convert density to RGB values
-    uint value_r = uint(d_r * 255.f);
-    uint value_g = uint(d_g * 255.f);
-    uint value_b = uint(d_b * 255.f);
+    uchar value_r = uchar(clamp(d_r,0.f,1.f) * 255.f);
+    uchar value_g = uchar(clamp(d_g,0.f,1.f) * 255.f);
+    uchar value_b = uchar(clamp(d_b,0.f,1.f) * 255.f);
     
     //find correct position in pixel array, given each pixel has 1 components
-    int p = index * 4;
+    int p = index;
     
     //create greyscale image with alpha of 1
-    pixels[p] = value_r;  //R
-    pixels[p+1] = value_g;//G
-    pixels[p+2] = value_b;//B
-    pixels[p+3] = 255;  //Alpha channel
+    pixels[p] = uchar4(value_r, value_g, value_b, uchar(255)); 
+
 }

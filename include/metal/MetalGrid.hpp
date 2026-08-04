@@ -7,6 +7,7 @@
 #include <SFML/Window.hpp>
 #include "../include/FastNoiseLite.h"
 #include "MetalContext.hpp"
+#include <span>
 
 class MetalGrid
 {
@@ -35,7 +36,7 @@ class MetalGrid
         const std::vector<float>& u_velocity() const;
         const std::vector<float>& v_velocity() const;
         const std::vector<float>& get_noise() const;
-        const std::uint8_t* get_pixels() const;
+        std::span<const std::uint8_t> get_pixels() const;
 
         // vel field setter for test purposes
         void setVelocityAt(std::size_t x, std::size_t y, float u,float v);

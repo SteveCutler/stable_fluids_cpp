@@ -28,64 +28,64 @@ m_sprite(m_texture)
     m_sprite.setScale(m_scale);
 
     //Performance debug text intializing
-    fpsText.setCharacterSize(12);
-    fpsText.setFillColor(sf::Color::White);
-    fpsText.setPosition({5.f, 2.f});
+    // fpsText.setCharacterSize(12);
+    // fpsText.setFillColor(sf::Color::White);
+    // fpsText.setPosition({5.f, 2.f});
   
-    msText.setCharacterSize(12);
-    msText.setFillColor(sf::Color::White);
-    msText.setPosition({5.f, 15.f});
+    // msText.setCharacterSize(12);
+    // msText.setFillColor(sf::Color::White);
+    // msText.setPosition({5.f, 15.f});
 
-    noise.setCharacterSize(12);
-    noise.setFillColor(sf::Color::White);
-    noise.setPosition({5.f, 30.f});
+    // noise.setCharacterSize(12);
+    // noise.setFillColor(sf::Color::White);
+    // noise.setPosition({5.f, 30.f});
 
-    vel.setCharacterSize(12);
-    vel.setFillColor(sf::Color::White);
-    vel.setPosition({5.f, 45.f});
+    // vel.setCharacterSize(12);
+    // vel.setFillColor(sf::Color::White);
+    // vel.setPosition({5.f, 45.f});
 
-    divergence.setCharacterSize(12);
-    divergence.setFillColor(sf::Color::White);
-    divergence.setPosition({5.f, 60.f});
+    // divergence.setCharacterSize(12);
+    // divergence.setFillColor(sf::Color::White);
+    // divergence.setPosition({5.f, 60.f});
 
-    pressure.setCharacterSize(12);
-    pressure.setFillColor(sf::Color::White);
-    pressure.setPosition({5.f, 75.f});
+    // pressure.setCharacterSize(12);
+    // pressure.setFillColor(sf::Color::White);
+    // pressure.setPosition({5.f, 75.f});
 
-    diffuse.setCharacterSize(12);
-    diffuse.setFillColor(sf::Color::White);
-    diffuse.setPosition({5.f, 90.f});
+    // diffuse.setCharacterSize(12);
+    // diffuse.setFillColor(sf::Color::White);
+    // diffuse.setPosition({5.f, 90.f});
 
-    advect.setCharacterSize(12);
-    advect.setFillColor(sf::Color::White);
-    advect.setPosition({5.f, 105.f});
+    // advect.setCharacterSize(12);
+    // advect.setFillColor(sf::Color::White);
+    // advect.setPosition({5.f, 105.f});
 
-    advectVel.setCharacterSize(12);
-    advectVel.setFillColor(sf::Color::White);
-    advectVel.setPosition({5.f, 120.f});
+    // advectVel.setCharacterSize(12);
+    // advectVel.setFillColor(sf::Color::White);
+    // advectVel.setPosition({5.f, 120.f});
 
-    project.setCharacterSize(12);
-    project.setFillColor(sf::Color::White);
-    project.setPosition({5.f, 135.f});
+    // project.setCharacterSize(12);
+    // project.setFillColor(sf::Color::White);
+    // project.setPosition({5.f, 135.f});
 
-    addSource.setCharacterSize(12);
-    addSource.setFillColor(sf::Color::White);
-    addSource.setPosition({5.f, 150.f});
+    // addSource.setCharacterSize(12);
+    // addSource.setFillColor(sf::Color::White);
+    // addSource.setPosition({5.f, 150.f});
 
-    render.setCharacterSize(12);
-    render.setFillColor(sf::Color::White);
-    render.setPosition({5.f, 180.f});
+    // render.setCharacterSize(12);
+    // render.setFillColor(sf::Color::White);
+    // render.setPosition({5.f, 180.f});
 
 }
 
 void MetalRenderer::update(const MetalGrid& grid, bool arrow_viz){
     // calc elapsed time
-        float elapsed = m_clock.restart().asSeconds();
+        //float elapsed = m_clock.restart().asSeconds();
         
 
         // calculate performance values
-        float fps = 1.f / elapsed;
-        float ms = elapsed;
+        //float fps = 1.f / elapsed;
+        //float ms = elapsed;
 
 
         // overlay strings
@@ -139,15 +139,11 @@ void MetalRenderer::update(const MetalGrid& grid, bool arrow_viz){
 
         
         const auto& pixels = grid.get_pixels();
-
-        // Load pixel RGBA data into texture
-        m_texture.update(pixels);
-
-
-        //calc frame render time
-        float renderTime = m_renderClock.restart().asMicroseconds()/1000.f;
-        setString(render, "\nRender ms: " + std::to_string(renderTime));
-
+       
+        
+        // Load pixel RGBA data into texture to render
+        m_texture.update(pixels.data());
+        //std::cout << "pixel 1: " << int(pixels.data()[0]) << "\n";
 
 }
 void MetalRenderer::draw(sf::RenderWindow& window, bool arrow_viz){

@@ -59,8 +59,6 @@ int main()
 
     //OBJECT CREATION
     MetalContext metalcontext{"build/FluidKernels.metallib"};
-
-    
     MetalGrid metalgrid{width, height, cellCount, bytesize, emitters, seed, metalcontext};
     MetalRenderer renderer(width, height, font);
     // create the window
@@ -145,30 +143,30 @@ int main()
 
 
     auto* framePool = NS::AutoreleasePool::alloc()->init();
-
+    
     // run the main loop
     while (window.isOpen())
     {
         //initialize frame autopool
         
-
+        
         // handle events
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
                 window.close();
 
-            if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-                if (key->code == sf::Keyboard::Key::V) {
-                    arrow_viz = !arrow_viz;
-                    }
-                }
+            // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+            //     if (key->code == sf::Keyboard::Key::V) {
+            //         arrow_viz = !arrow_viz;
+            //         }
+            //     }
 
-            if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-                if (key->code == sf::Keyboard::Key::P) {
-                    paused = !paused;
-                    }
-                }
+            // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+            //     if (key->code == sf::Keyboard::Key::P) {
+            //         paused = !paused;
+            //         }
+            //     }
 
             // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
             //     if (key->code == sf::Keyboard::Key::R) {
@@ -202,7 +200,7 @@ int main()
         //         }
         //     }
             
-        // }
+        }
         
         // if(active_slider){
         //     active_slider->dragging = true;
@@ -231,17 +229,17 @@ int main()
         // }
 
         //draw instructions
-        for( auto& instruction : Instructions){
-            window.draw(instruction);
-        }
-        window.draw(stepDisplay);
+        // for( auto& instruction : Instructions){
+        //     window.draw(instruction);
+        // }
+        // window.draw(stepDisplay);
 
         // display
         window.display();
 
         //release frame autopool
     }
-}
+
 
 framePool->release();
 return 0;

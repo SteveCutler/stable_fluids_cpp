@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "Emitter.hpp"
 
+
 MetalGrid::MetalGrid(
     std::size_t width, 
     std::size_t height, 
@@ -131,8 +132,12 @@ MetalGrid::MetalGrid(
             m_bytesize,
             MTL::ResourceStorageModeShared
         );
+        //setting pixel buffer to correct size for all 4 channels
+
+        std::size_t pixelBytes = m_cellcount * 4 * sizeof(std::uint8_t);
+
         m_pixels = m_metalcontext.get_device()->newBuffer(
-            m_bytesize*4.f,
+            pixelBytes,
             MTL::ResourceStorageModeShared
         );
 
@@ -153,7 +158,7 @@ MetalGrid::MetalGrid(
                 if (m_density_b != nullptr) m_density_b->release();
                 if (m_u_velocity != nullptr) m_u_velocity->release();
                 if (m_v_velocity != nullptr) m_v_velocity->release();
-                if (m_pixels != nullptr) m_v_velocity->release();
+                if (m_pixels != nullptr) m_pixels->release();
                 
                 return;
             }
@@ -164,14 +169,14 @@ MetalGrid::MetalGrid(
         float* b = static_cast<float*>(m_density_b->contents());
         float* u = static_cast<float*>(m_u_velocity->contents());
         float* v = static_cast<float*>(m_v_velocity->contents());
-        float* p = static_cast<float*>(m_pixels->contents());
+        std::uint8_t* p = static_cast<std::uint8_t*>(m_pixels->contents());
 
         std::fill_n(r,m_cellcount,0.f);
         std::fill_n(g,m_cellcount,0.f);
         std::fill_n(b,m_cellcount,0.f);
         std::fill_n(u,m_cellcount,0.f);
         std::fill_n(v,m_cellcount,0.f);
-        std::fill_n(p,m_cellcount,0.f);
+        std::fill_n(p,m_cellcount*4,0u);
 
 
     };
@@ -214,6 +219,19 @@ void MetalGrid::update(float dt){
 
     commandBuffer->commit();
     commandBuffer->waitUntilCompleted();
+
+    if (commandBuffer->status() == MTL::CommandBufferStatusError) {
+        auto* error = commandBuffer->error();
+
+        std::cerr << "Metal command buffer failed";
+
+        if (error != nullptr) {
+            std::cerr << ": "
+                    << error->localizedDescription()->utf8String();
+        }
+
+        std::cerr << '\n';
+    }
 
 };
 
@@ -430,11 +448,13 @@ void MetalGrid::encodePixels(MTL::ComputeCommandEncoder* encoder){
     );
 };
 
-const std::uint8_t* MetalGrid::get_pixels() const
+std::span<const std::uint8_t> MetalGrid::get_pixels() const
 {
-    return static_cast<const std::uint8_t*>(
+    auto* pixels =  static_cast<const std::uint8_t*>(
         m_pixels->contents()
     );
+
+    return {pixels, m_width * m_height *4};
 }
 
 
