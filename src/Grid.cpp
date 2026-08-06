@@ -17,6 +17,7 @@ m_decay(0.994f),
 m_curl_mult(1000),
 m_noise_freq(0.04f),
 m_mult_threaded(threaded),
+m_noiseTimeMult(10.f),
 
 m_seed(seed),
 m_width(width),
@@ -145,6 +146,7 @@ void Grid::update(float dt){
 
     m_elapsed += dt;
 
+    
     //Create noise scalar field
     m_performance_clock.restart();
     calcNoise(dt);
@@ -444,7 +446,7 @@ void Grid::clearPressure(){
 
 
 void Grid::calcNoise(float dt){
-    m_elapsed += dt*10.f;   
+    m_elapsed += dt*m_noiseTimeMult;   
 
     m_noise_gen.SetFrequency(m_noise_freq);
 

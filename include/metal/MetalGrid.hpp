@@ -24,6 +24,7 @@ class MetalGrid
         float m_curl_mult;
         float m_noise_freq;
         bool m_mult_threaded;
+        float m_noiseTimeMult;
 
         //public functions
         void update(float dt);
@@ -60,8 +61,10 @@ class MetalGrid
     private:
 
         //kernel encoding functions
-        void encodeBuoyancy(MTL::ComputeCommandEncoder* encoder, float dt);
-        void encodeDecay(MTL::ComputeCommandEncoder* encoder);
+        void encodeAdvectVel(MTL::ComputeCommandEncoder* encoder, float dt);
+        void encodeNoiseField(MTL::ComputeCommandEncoder* encoder, float elapsed);
+        void encodeVelField(MTL::ComputeCommandEncoder* encoder, float dt);
+
         void encodeEmitter(MTL::ComputeCommandEncoder* encoder, Emitter* emitter);
         void encodePixels(MTL::ComputeCommandEncoder* encoder);
         void encodeDensityAdvection(MTL::ComputeCommandEncoder* encoder, float dt);
@@ -144,10 +147,12 @@ class MetalGrid
         std::size_t m_pressure_iter;
 
         //metal kernels
-        MTL::ComputePipelineState* m_buoyancyKernel;
+        MTL::ComputePipelineState* m_advectVelKernel;
         MTL::ComputePipelineState* m_emitterKernel;
         MTL::ComputePipelineState* m_pixelKernel;
         MTL::ComputePipelineState* m_advectKernel;
+        MTL::ComputePipelineState* m_computeNoiseKernel;
+        MTL::ComputePipelineState* m_velFieldKernel;
         
         //Threading Variables
         std::size_t m_thread_count;
@@ -173,6 +178,7 @@ class MetalGrid
         MTL::Buffer* m_density_b;
         MTL::Buffer* m_u_velocity;
         MTL::Buffer* m_v_velocity;
+        MTL::Buffer* m_noiseField;
 
         std::vector<float> m_diffusion_scratch;
         std::size_t m_diffusion_iterations;
@@ -189,5 +195,8 @@ class MetalGrid
         std::vector<float> m_pressure_prev;
 
         std::vector<float> m_divergence;
+        
+        //sim logic
+        bool m_first_frame;
 
 };

@@ -197,3 +197,7 @@ CPU v1 is feature-complete enough to serve as the numerical and performance
 baseline for the next phase: a Metal compute implementation. The current focus
 is preserving the same simulation behavior while moving field storage and
 individual kernels onto the GPU.
+
+## Grabbed the simplex noise implementartion for metal from here:
+
+https://github.com/JoshuaSullivan/SimplexNoiseFilter/blob/091607969586d33f491fe29fca91802ef9ea50db/Sources/SimplexNoiseCompute/kernel/SimplexNoiseCompute.metal

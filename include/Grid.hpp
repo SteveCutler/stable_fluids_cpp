@@ -29,6 +29,7 @@ class Grid
         float m_curl_mult;
         float m_noise_freq;
         bool m_mult_threaded;
+        float m_noiseTimeMult;
         
         //multithreading by row template
         template <typename Func>

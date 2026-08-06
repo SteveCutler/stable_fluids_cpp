@@ -1,32 +1,9 @@
 #include <metal_stdlib>
+#include "SimplexNoiseCompute.metal"
+
 using namespace metal;
 
-kernel void buoyancy(
-    device const float* densityR [[buffer(0)]],
-    device const float* densityG [[buffer(1)]],
-    device const float* densityB [[buffer(2)]],
-    device float* v_velocity     [[buffer(3)]],
-    constant float& dt           [[buffer(4)]],
-    constant float& buoyancy     [[buffer(5)]],
-    constant uint& cellcount     [[buffer(6)]],
-    uint index                   [[thread_position_in_grid]])
-{
 
-    //out of bound check
-    if(index >= cellcount){
-        return;
-    }
-
-    //sample max density value
-    float value = max(
-        densityR[index],
-            max(
-                densityG[index],
-                densityB[index])
-    );
-    
-    v_velocity[index] -= buoyancy * dt ;
-}
 
 kernel void  emitter(
     device float* densityR      [[buffer(0)]],
@@ -189,10 +166,169 @@ kernel void advectDensity(
         float new_dens_g = tl_g*tl_weight + tr_g*tr_weight + bl_g*bl_weight + br_g*br_weight;
         float new_dens_b = tl_b*tl_weight + tr_b*tr_weight + bl_b*bl_weight + br_b*br_weight;
 
-        densityR[index] = new_dens_r*decay;
-        densityG[index] = new_dens_g*decay;
-        densityB[index] = new_dens_b*decay;
+        densityR[index] = new_dens_r;
+        densityG[index] = new_dens_g;
+        densityB[index] = new_dens_b;
 
 
     }
 
+
+kernel void advectVelocity(
+    device float* u_velocity            [[buffer(0)]],
+    device float* v_velocity            [[buffer(1)]],
+    device const float* u_velocity_prev [[buffer(2)]],
+    device const float* v_velocity_prev [[buffer(3)]],
+    constant float& dt                  [[buffer(4)]],
+    constant float& buoyancy             [[buffer(5)]],
+    constant uint& cellcount            [[buffer(6)]],
+    constant uint& width                [[buffer(7)]],
+    constant uint& height               [[buffer(8)]],
+    constant float& velDecay            [[buffer(9)]],
+    device const float* densityR        [[buffer(10)]],
+    device const float* densityG        [[buffer(11)]],
+    device const float* densityB        [[buffer(12)]],
+    uint2 gid                           [[thread_position_in_grid]]){
+
+
+        //boundary checks
+        if((gid.y*width + gid.x) >= cellcount){
+            return;
+        }
+
+        if (gid.x == 0 || gid.x >= width - 1 ||
+            gid.y == 0 || gid.y >= height - 1) {
+            return;
+        }
+
+        // calculate index
+        int index = gid.y*width + gid.x;
+    
+        //index velocity
+        float old_u_vel = u_velocity_prev[index];
+        float old_v_vel = v_velocity_prev[index];
+
+        //backwards location lookup 
+        float new_u_pos = gid.x - old_u_vel*dt;
+        float new_v_pos = gid.y - old_v_vel*dt;
+
+        //finding 4 corners for bilinear interpolation, clamping in boundaries
+        float x_sample = clamp(new_u_pos,1.0f,width-2.0f);
+        float y_sample = clamp(new_v_pos,1.0f,height-2.0f);
+
+        uint x_floor = floor(x_sample);
+        uint x_high = x_floor+1;
+        uint y_floor = floor(y_sample);
+        uint y_high = y_floor+1;
+
+        //finding values at corners
+        uint tl_index = x_floor+y_floor*width;
+        uint tr_index = x_high+y_floor*width;
+        uint bl_index = x_floor+y_high*width;
+        uint br_index = x_high+y_high*width;
+
+        float tl_u = u_velocity_prev[tl_index];
+        float tr_u = u_velocity_prev[tr_index];
+        float bl_u = u_velocity_prev[bl_index];
+        float br_u = u_velocity_prev[br_index];
+        
+        float tl_v = v_velocity_prev[tl_index];
+        float tr_v = v_velocity_prev[tr_index];
+        float bl_v = v_velocity_prev[bl_index];
+        float br_v = v_velocity_prev[br_index];
+
+        //distance from edges
+        float dx = x_sample - x_floor;
+        float dy = y_sample - y_floor;
+
+        //weighting calculations
+        float tl_weight = (1-dx)*(1-dy);
+        float tr_weight = dx*(1-dy);
+        float bl_weight = (1-dx)*dy;
+        float br_weight = dx*dy;
+
+        //calculate density sample
+        float densitySample =  max(densityR[index], max(densityG[index],densityB[index]));
+
+        float new_u_vel = (tl_u*tl_weight + tr_u*tr_weight + bl_u*bl_weight + br_u*br_weight) * velDecay;
+        float new_v_vel = (tl_v*tl_weight + tr_v*tr_weight + bl_v*bl_weight + br_v*br_weight) * velDecay;
+        
+        //adding buoyancy
+        new_v_vel -= buoyancy * dt ;
+        
+        u_velocity[index] = new_u_vel * densitySample;
+        v_velocity[index] = new_v_vel * densitySample;
+
+
+    }
+
+kernel void computeNoise(
+    device float* noise             [[buffer(0)]],
+    constant float& time            [[buffer(1)]],
+    constant float& frequency       [[buffer(2)]],
+    constant float& timeFrequency   [[buffer(3)]],
+    constant uint& width            [[buffer(4)]],
+    constant uint& height           [[buffer(5)]],
+    constant uint& cellcount        [[buffer(6)]],
+    uint2 gid                       [[thread_position_in_grid]]){
+
+        if (gid.x >= width || gid.y >= height) {
+            return;
+        }
+
+        uint index = gid.y * width + gid.x;
+
+        float x = float(gid.x) * frequency;
+        float y = float(gid.y) * frequency;
+        float z = time * timeFrequency;
+
+
+        noise[index] = noise3D(x, y, z);
+               
+    }
+
+
+kernel void generateVel(
+    device const float* noise   [[buffer(0)]],
+    device float* u_velocity    [[buffer(1)]],
+    device float* v_velocity    [[buffer(2)]],
+    device const float* densityR      [[buffer(3)]],
+    device const float* densityG      [[buffer(4)]],
+    device const float* densityB      [[buffer(5)]],
+    constant float& dt          [[buffer(6)]],
+    constant float& curlMult    [[buffer(7)]],
+    constant uint& width        [[buffer(8)]],
+    constant uint& height       [[buffer(9)]],
+    constant uint& cellcount       [[buffer(10)]],
+    uint2 gid                   [[thread_position_in_grid]])
+{
+
+
+    //boundary checks
+    if((gid.y*width + gid.x) >= cellcount){
+        return;
+    }
+
+    if (gid.x == 0 || gid.x >= width - 1 ||
+        gid.y == 0 || gid.y >= height - 1) {
+        return;
+    }
+
+    int index = gid.y*width+gid.x;
+
+
+    float xl = noise[index-1];
+    float xr = noise[index+1];
+    float yt = noise[index-width];
+    float yb = noise[index+width];
+
+    float dx = (xr-xl)/2;
+    float dy = (yb-yt)/2;
+
+    float densitySample =  clamp(max(densityR[index], max(densityG[index],densityB[index])),0.f,1.f);
+
+    u_velocity[index] += (-dy*curlMult*dt) * densitySample;
+    v_velocity[index] += (dx*curlMult*dt) * densitySample;
+    
+
+}
