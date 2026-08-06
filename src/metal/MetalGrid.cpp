@@ -16,15 +16,16 @@ MetalGrid::MetalGrid(
 
 
     m_pixels(nullptr),
-    m_buoyancy(1.f),
+    m_buoyancy(10.f),
     m_diff_co(4.5f),
     m_viscosity(0.05f),
-    m_decay(0.994f),
+    m_decay(0.99f),
     m_curl_mult(1000),
     m_noise_freq(0.04f),
     m_noiseTimeMult(10.f),
+   
 
-
+    m_noise_strength(0.5f),
     m_seed(seed),
     m_width(width),
     m_height(height),
@@ -240,13 +241,13 @@ MetalGrid::MetalGrid(
         std::fill_n(b,m_cellcount,0.f);
         //preset velocity values for testing
         std::fill_n(u,m_cellcount,0.f);
-        std::fill_n(v,m_cellcount,-100.f);
+        std::fill_n(v,m_cellcount,0.f);
         std::fill_n(nf,m_cellcount,0.f);
         std::fill_n(r_prev,m_cellcount,0.f);
         std::fill_n(g_prev,m_cellcount,0.f);
         std::fill_n(b_prev,m_cellcount,0.f);
         std::fill_n(u_prev,m_cellcount,0.f);
-        std::fill_n(v_prev,m_cellcount,-100.f);
+        std::fill_n(v_prev,m_cellcount,0.f);
         std::fill_n(p,m_cellcount*4,0u);
             
        
@@ -453,6 +454,12 @@ void MetalGrid::encodeVelField(MTL::ComputeCommandEncoder* encoder, float dt){
         &gpuCellCount,
         sizeof(gpuCellCount),
         10
+    );
+
+    encoder->setBytes(
+        &m_noise_strength,
+        sizeof(float),
+        11
     );
 
 

@@ -25,6 +25,7 @@ class MetalGrid
         float m_noise_freq;
         bool m_mult_threaded;
         float m_noiseTimeMult;
+        float m_noise_strength;
 
         //public functions
         void update(float dt);

@@ -166,9 +166,9 @@ kernel void advectDensity(
         float new_dens_g = tl_g*tl_weight + tr_g*tr_weight + bl_g*bl_weight + br_g*br_weight;
         float new_dens_b = tl_b*tl_weight + tr_b*tr_weight + bl_b*bl_weight + br_b*br_weight;
 
-        densityR[index] = new_dens_r;
-        densityG[index] = new_dens_g;
-        densityB[index] = new_dens_b;
+        densityR[index] = new_dens_r * decay;
+        densityG[index] = new_dens_g * decay;
+        densityB[index] = new_dens_b * decay;
 
 
     }
@@ -256,8 +256,8 @@ kernel void advectVelocity(
         //adding buoyancy
         new_v_vel -= buoyancy * dt ;
         
-        u_velocity[index] = new_u_vel * densitySample;
-        v_velocity[index] = new_v_vel * densitySample;
+        u_velocity[index] = new_u_vel;
+        v_velocity[index] = new_v_vel;
 
 
     }
@@ -300,6 +300,7 @@ kernel void generateVel(
     constant uint& width        [[buffer(8)]],
     constant uint& height       [[buffer(9)]],
     constant uint& cellcount       [[buffer(10)]],
+    constant float& strength       [[buffer(11)]],
     uint2 gid                   [[thread_position_in_grid]])
 {
 
@@ -327,8 +328,8 @@ kernel void generateVel(
 
     float densitySample =  clamp(max(densityR[index], max(densityG[index],densityB[index])),0.f,1.f);
 
-    u_velocity[index] += (-dy*curlMult*dt) * densitySample;
-    v_velocity[index] += (dx*curlMult*dt) * densitySample;
+    u_velocity[index] += (-dy*curlMult*dt)*strength;
+    v_velocity[index] += (dx*curlMult*dt)*strength;
     
 
 }
