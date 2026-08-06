@@ -69,6 +69,9 @@ class MetalGrid
         void encodeEmitter(MTL::ComputeCommandEncoder* encoder, Emitter* emitter);
         void encodePixels(MTL::ComputeCommandEncoder* encoder);
         void encodeDensityAdvection(MTL::ComputeCommandEncoder* encoder, float dt);
+        
+        void encodeDiffuseVelocity(MTL::ComputeCommandEncoder* encoder, float dt);
+        void encodeDiffuseDensity(MTL::ComputeCommandEncoder* encoder, float dt);
 
         void encodeBoundaryDensity(MTL::ComputeCommandEncoder* encoder);
         void encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder);
@@ -161,6 +164,8 @@ class MetalGrid
         MTL::ComputePipelineState* m_boundaryDensityKernel;
         MTL::ComputePipelineState* m_boundaryVelocityKernel;
         MTL::ComputePipelineState* m_boundaryPressureKernel;
+        MTL::ComputePipelineState* m_diffuseVelocityKernel;
+        MTL::ComputePipelineState* m_diffuseDensityKernel;
         
         //Threading Variables
         std::size_t m_thread_count;

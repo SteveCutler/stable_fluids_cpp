@@ -372,6 +372,7 @@ kernel void boundaryDensity(
     }
     
 }
+
 kernel void boundaryPressure(
     device float* densityR  [[buffer(0)]],
     device float* densityG  [[buffer(1)]],
@@ -447,3 +448,78 @@ kernel void boundaryVelocity(
 }
 
 
+kernel void diffuseVelocity(
+    device float* u_velocity [[buffer(0)]],
+    device float* v_velocity [[buffer(1)]],
+    device const float* u_velocity_prev [[buffer(2)]],
+    device const float* v_velocity_prev [[buffer(3)]],
+    constant float& dt [[buffer(4)]],
+    constant float& viscosity [[buffer(5)]],
+    constant uint& width [[buffer(6)]],
+    constant uint& height [[buffer(7)]],
+    constant uint& cellcount [[buffer(8)]],
+    uint2 gid               [[thread_position_in_grid]]
+){
+    //boundary checks
+    if((gid.y*width + gid.x) >= cellcount){
+        return;
+    }
+
+    if (gid.x == 0 || gid.x >= width - 1 ||
+        gid.y == 0 || gid.y >= height - 1) {
+        return;
+    }
+
+    int index = gid.y*width+gid.x;
+
+   //calc corner indices
+
+    uint l_index = index-1;
+    uint r_index = index+1;
+    uint u_index = index-width;
+    uint d_index = index+width;
+
+    //getting data for laplacian
+    float left_u = u_velocity_prev[l_index];
+    float right_u = u_velocity_prev[r_index];
+    float up_u = u_velocity_prev[u_index];
+    float down_u = u_velocity_prev[d_index];
+    float center_u = u_velocity_prev[index];
+
+    float left_v = v_velocity_prev[l_index];
+    float right_v = v_velocity_prev[r_index];
+    float up_v = v_velocity_prev[u_index];
+    float down_v = v_velocity_prev[d_index];
+    float center_v = v_velocity_prev[index];
+
+    //calculate laplacian
+    float lap_u = left_u+right_u+up_u+down_u - (4*center_u);
+    float lap_v = left_v+right_v+up_v+down_v - (4*center_v);
+
+    //calculate and write new density
+    float new_u_vel = u_velocity_prev[index]+ viscosity * lap_u*dt;
+    float new_v_vel = v_velocity_prev[index]+ viscosity * lap_v*dt;
+
+    u_velocity[index] = new_u_vel;
+    v_velocity[index] = new_v_vel;
+
+
+
+
+}
+
+// kernel void diffuseDensity()(
+//     device float* densityR [[buffer(0)]],
+//     device float* densityG [[buffer(1)]],
+//     device float* densityB [[buffer(2)]],
+//     device const float* densityR_prev [[buffer(3)]],
+//     device const float* densityG_prev [[buffer(4)]],
+//     device const float* densityB_prev [[buffer(5)]],
+//     constant float& dt [[buffer(4)]],
+//     constant float& strength [[buffer(5)]],
+//     constant float& viscosity [[buffer(6)]],
+//     constant uint& width [[buffer(7)]],
+//     constant uint& height [[buffer(8)]],
+//     uint2 gid               [[thread_position_in_grid]]){
+//         return;
+//     }
