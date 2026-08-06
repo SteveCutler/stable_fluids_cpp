@@ -69,6 +69,10 @@ class MetalGrid
         void encodeEmitter(MTL::ComputeCommandEncoder* encoder, Emitter* emitter);
         void encodePixels(MTL::ComputeCommandEncoder* encoder);
         void encodeDensityAdvection(MTL::ComputeCommandEncoder* encoder, float dt);
+
+        void encodeBoundaryDensity(MTL::ComputeCommandEncoder* encoder);
+        void encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder);
+        void encodeBoundaryPressure(MTL::ComputeCommandEncoder* encoder);
         
         
 
@@ -154,6 +158,9 @@ class MetalGrid
         MTL::ComputePipelineState* m_advectKernel;
         MTL::ComputePipelineState* m_computeNoiseKernel;
         MTL::ComputePipelineState* m_velFieldKernel;
+        MTL::ComputePipelineState* m_boundaryDensityKernel;
+        MTL::ComputePipelineState* m_boundaryVelocityKernel;
+        MTL::ComputePipelineState* m_boundaryPressureKernel;
         
         //Threading Variables
         std::size_t m_thread_count;
@@ -192,7 +199,7 @@ class MetalGrid
 
         std::vector<float> m_noise;
 
-        std::vector<float> m_pressure;
+        MTL::Buffer* m_pressure;
         std::vector<float> m_pressure_prev;
 
         std::vector<float> m_divergence;

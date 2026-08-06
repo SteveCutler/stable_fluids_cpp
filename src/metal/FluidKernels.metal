@@ -333,3 +333,117 @@ kernel void generateVel(
     
 
 }
+
+kernel void boundaryDensity(
+    device float* densityR  [[buffer(0)]],
+    device float* densityG  [[buffer(1)]],
+    device float* densityB  [[buffer(2)]],
+    constant uint& width    [[buffer(3)]],
+    constant uint& height   [[buffer(4)]],
+    constant uint& cellcount [[buffer(5)]],
+    uint gid [[thread_position_in_grid]]
+){
+    
+    if(gid<width){
+
+        int index_top = gid;
+        int index_bottom = cellcount - width + gid;
+
+        densityR[index_top] = densityR[index_top+width];
+        densityG[index_top] = densityG[index_top+width];
+        densityB[index_top] = densityB[index_top+width];
+        
+        densityR[index_bottom] = densityR[index_bottom-width];
+        densityG[index_bottom] = densityG[index_bottom-width];
+        densityB[index_bottom] = densityB[index_bottom-width];
+    }
+
+    if(gid<height){
+        int index_left = gid*width;
+        int index_right = (width-1) + gid*width;
+
+        densityR[index_left] = densityR[index_left+1];
+        densityG[index_left] = densityG[index_left+1];
+        densityB[index_left] = densityB[index_left+1];
+        
+        densityR[index_right] = densityR[index_right-1];
+        densityG[index_right] = densityG[index_right-1];
+        densityB[index_right] = densityB[index_right-1];
+    }
+    
+}
+kernel void boundaryPressure(
+    device float* densityR  [[buffer(0)]],
+    device float* densityG  [[buffer(1)]],
+    device float* densityB  [[buffer(2)]],
+    constant uint& width    [[buffer(3)]],
+    constant uint& height   [[buffer(4)]],
+    constant uint& cellcount [[buffer(5)]],
+    uint gid [[thread_position_in_grid]]
+){
+    
+    if(gid<width){
+
+        int index_top = gid;
+        int index_bottom = cellcount - width + gid;
+
+        densityR[index_top] = densityR[index_top+width];
+        densityG[index_top] = densityG[index_top+width];
+        densityB[index_top] = densityB[index_top+width];
+        
+        densityR[index_bottom] = densityR[index_bottom-width];
+        densityG[index_bottom] = densityG[index_bottom-width];
+        densityB[index_bottom] = densityB[index_bottom-width];
+    }
+
+    if(gid<height){
+        int index_left = gid*width;
+        int index_right = (width-1) + gid*width;
+
+        densityR[index_left] = densityR[index_left+1];
+        densityG[index_left] = densityG[index_left+1];
+        densityB[index_left] = densityB[index_left+1];
+        
+        densityR[index_right] = densityR[index_right-1];
+        densityG[index_right] = densityG[index_right-1];
+        densityB[index_right] = densityB[index_right-1];
+    }
+    
+}
+kernel void boundaryVelocity(
+    device float* u_velocity  [[buffer(0)]],
+    device float* v_velocity  [[buffer(1)]],
+    constant uint& width    [[buffer(2)]],
+    constant uint& height   [[buffer(3)]],
+    constant uint& cellcount [[buffer(4)]],
+    uint gid [[thread_position_in_grid]]
+){
+    
+    if(gid<width){
+
+        int index_top = gid;
+        int index_bottom = cellcount - width + gid;
+
+        u_velocity[index_top] = u_velocity[index_top+width];
+        v_velocity[index_top] = 0.f;
+        
+        u_velocity[index_bottom] = u_velocity[index_bottom-width];
+        v_velocity[index_bottom] = 0.f;
+
+    }
+
+    if(gid<height){
+        int index_left = gid*width;
+        int index_right = (width-1) + gid*width;
+
+        u_velocity[index_left] = 0.f;
+        v_velocity[index_left] = v_velocity[index_left+1];
+        
+        u_velocity[index_right] = 0.f;
+        v_velocity[index_right] = v_velocity[index_right-1];
+
+    }
+    
+}
+
+

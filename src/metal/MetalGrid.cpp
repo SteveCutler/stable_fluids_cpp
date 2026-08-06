@@ -16,16 +16,16 @@ MetalGrid::MetalGrid(
 
 
     m_pixels(nullptr),
-    m_buoyancy(10.f),
+    m_buoyancy(1.f),
     m_diff_co(4.5f),
     m_viscosity(0.05f),
-    m_decay(0.99f),
-    m_curl_mult(1000),
-    m_noise_freq(0.04f),
-    m_noiseTimeMult(10.f),
+    m_decay(0.995f),
+    m_curl_mult(10),
+    m_noise_freq(0.05f),
+    m_noiseTimeMult(1.f),
    
 
-    m_noise_strength(0.5f),
+    m_noise_strength(2.f),
     m_seed(seed),
     m_width(width),
     m_height(height),
@@ -68,6 +68,9 @@ MetalGrid::MetalGrid(
     m_advectKernel(nullptr),
     m_computeNoiseKernel(nullptr),
     m_velFieldKernel(nullptr),
+    m_boundaryDensityKernel(nullptr),
+    m_boundaryVelocityKernel(nullptr),
+    m_boundaryPressureKernel(nullptr),
 
     m_density_r_prev(nullptr),
     m_density_g_prev(nullptr),
@@ -76,7 +79,7 @@ MetalGrid::MetalGrid(
     m_v_velocity_prev(nullptr),
 
     m_noise(width*height, 0.0f),
-    m_pressure(width*height, 0.0f),
+    m_pressure(nullptr),
     m_pressure_prev(width*height, 0.0f),
     m_divergence(width*height, 0.0f),
     m_first_frame(true)
@@ -131,6 +134,27 @@ MetalGrid::MetalGrid(
             return; 
         }
 
+        m_boundaryDensityKernel = m_metalcontext.CreatePipelineState("boundaryDensity");
+    
+        if(m_boundaryDensityKernel == nullptr){
+            std::cerr << "problem creating boundary density kernel" << std::endl;
+            return; 
+        }
+
+        m_boundaryVelocityKernel = m_metalcontext.CreatePipelineState("boundaryVelocity");
+    
+        if(m_boundaryVelocityKernel == nullptr){
+            std::cerr << "problem creating boundary velocity kernel" << std::endl;
+            return; 
+        }
+
+        m_boundaryPressureKernel = m_metalcontext.CreatePipelineState("boundaryPressure");
+    
+        if(m_boundaryPressureKernel == nullptr){
+            std::cerr << "problem creating boundary pressure kernel" << std::endl;
+            return; 
+        }
+
         // initialize buffers
         m_density_r = m_metalcontext.get_device()->newBuffer(
             m_bytesize,
@@ -153,6 +177,10 @@ MetalGrid::MetalGrid(
             MTL::ResourceStorageModeShared
         );
         m_noiseField = m_metalcontext.get_device()->newBuffer(
+            m_bytesize,
+            MTL::ResourceStorageModeShared
+        );
+        m_pressure = m_metalcontext.get_device()->newBuffer(
             m_bytesize,
             MTL::ResourceStorageModeShared
         );
@@ -196,6 +224,7 @@ MetalGrid::MetalGrid(
             m_v_velocity == nullptr ||
             m_u_velocity == nullptr ||
             m_noiseField == nullptr ||
+            m_pressure == nullptr ||
             m_density_r_prev == nullptr ||
             m_density_g_prev == nullptr || 
             m_density_b_prev == nullptr ||
@@ -212,6 +241,7 @@ MetalGrid::MetalGrid(
                 if (m_u_velocity != nullptr) m_u_velocity->release();
                 if (m_v_velocity != nullptr) m_v_velocity->release();
                 if (m_noiseField != nullptr) m_noiseField->release();
+                if (m_pressure != nullptr) m_noiseField->release();
                 if (m_density_r_prev != nullptr) m_density_r->release();
                 if (m_density_g_prev != nullptr) m_density_g->release();
                 if (m_density_b_prev != nullptr) m_density_b->release();
@@ -229,6 +259,7 @@ MetalGrid::MetalGrid(
         float* u = static_cast<float*>(m_u_velocity->contents());
         float* v = static_cast<float*>(m_v_velocity->contents());
         float* nf = static_cast<float*>(m_noiseField->contents());
+        float* pr = static_cast<float*>(m_pressure->contents());
         float* r_prev = static_cast<float*>(m_density_r_prev->contents());
         float* g_prev = static_cast<float*>(m_density_g_prev->contents());
         float* b_prev = static_cast<float*>(m_density_b_prev->contents());
@@ -243,6 +274,7 @@ MetalGrid::MetalGrid(
         std::fill_n(u,m_cellcount,0.f);
         std::fill_n(v,m_cellcount,0.f);
         std::fill_n(nf,m_cellcount,0.f);
+        std::fill_n(pr,m_cellcount,0.f);
         std::fill_n(r_prev,m_cellcount,0.f);
         std::fill_n(g_prev,m_cellcount,0.f);
         std::fill_n(b_prev,m_cellcount,0.f);
@@ -301,10 +333,12 @@ void MetalGrid::update(float dt){
     std::swap(m_u_velocity,m_u_velocity_prev);
     std::swap(m_v_velocity,m_v_velocity_prev);
     
-    //advect vel
+    //encode advect vel
     encodeAdvectVel(encoder, dt);
 
-    
+    //encoe velocity boundaries
+    encodeBoundaryVelocity(encoder);
+
     
     //encode emitter kernel
     for(auto& emitter : m_emitters){
@@ -317,6 +351,9 @@ void MetalGrid::update(float dt){
     
     //encode density advection
     encodeDensityAdvection(encoder, dt);
+
+    //density boundary
+    encodeBoundaryDensity(encoder);
    
     //encode pixels
     encodePixels(encoder);
@@ -436,13 +473,13 @@ void MetalGrid::encodeVelField(MTL::ComputeCommandEncoder* encoder, float dt){
     );
     encoder->setBytes(
         &width,
-        sizeof(float),
+        sizeof(width),
         8
     );
 
      encoder->setBytes(
         &height,
-        sizeof(width),
+        sizeof(height),
         9
     );
 
@@ -720,6 +757,77 @@ void MetalGrid::encodePixels(MTL::ComputeCommandEncoder* encoder){
         );
 
     MTL::Size threadgroupSize(threadgroupWidth, 1, 1);
+
+    encoder->dispatchThreads(
+        gridSize,
+        threadgroupSize
+    );
+};
+
+void MetalGrid::encodeBoundaryDensity(MTL::ComputeCommandEncoder* encoder){
+   
+    encoder->setComputePipelineState(m_boundaryDensityKernel);
+
+    //bind the buffers
+    encoder->setBuffer(m_density_r, 0, 0);
+    encoder->setBuffer(m_density_g, 0, 1);
+    encoder->setBuffer(m_density_b, 0, 2);
+
+    std::uint32_t width = static_cast<std::uint32_t>(m_width);
+    std::uint32_t height = static_cast<std::uint32_t>(m_height);
+    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
+    
+
+    encoder->setBytes(&width,
+        sizeof(width),
+        3);
+    encoder->setBytes(&height,sizeof(height),4);
+    encoder->setBytes(&m_cellcount,sizeof(m_cellcount),5);
+
+    std::uint32_t edge_length =  static_cast<std::uint32_t>(std::max(width,height));
+
+
+    //set number of threads for kernel
+    MTL::Size gridSize(edge_length, 1, 1);
+
+
+    MTL::Size threadgroupSize(256, 1, 1);
+
+    encoder->dispatchThreads(
+        gridSize,
+        threadgroupSize
+    );
+};
+
+void MetalGrid::encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder){
+   
+    encoder->setComputePipelineState(m_boundaryVelocityKernel);
+
+    //bind the buffers
+    encoder->setBuffer(m_u_velocity, 0, 0);
+    encoder->setBuffer(m_v_velocity, 0, 1);
+
+    std::uint32_t width = static_cast<std::uint32_t>(m_width);
+    std::uint32_t height = static_cast<std::uint32_t>(m_height);
+    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
+    
+
+    encoder->setBytes(&width,
+        sizeof(width),
+        2);
+
+    encoder->setBytes(&height,sizeof(height),3);
+    encoder->setBytes(&m_cellcount,sizeof(m_cellcount),4);
+
+    std::uint32_t edge_length =  static_cast<std::uint32_t>(std::max(width,height));
+
+    std::cout << "edge_length = " << edge_length << "\n";
+
+    //set number of threads for kernel
+    MTL::Size gridSize(edge_length, 1, 1);
+
+
+    MTL::Size threadgroupSize(256, 1, 1);
 
     encoder->dispatchThreads(
         gridSize,
