@@ -323,13 +323,13 @@ kernel void generateVel(
     float yt = noise[index-width];
     float yb = noise[index+width];
 
-    float dx = (xr-xl)/2;
-    float dy = (yb-yt)/2;
+    float dx = ((xr-xl)/2)*strength;
+    float dy = ((yb-yt)/2)*strength;
 
     float densitySample =  clamp(max(densityR[index], max(densityG[index],densityB[index])),0.f,1.f);
 
-    u_velocity[index] += (-dy*curlMult*dt)*strength;
-    v_velocity[index] += (dx*curlMult*dt)*strength;
+    u_velocity[index] += (-dy*curlMult*dt);
+    v_velocity[index] += (dx*curlMult*dt);
     
 
 }
@@ -374,12 +374,10 @@ kernel void boundaryDensity(
 }
 
 kernel void boundaryPressure(
-    device float* densityR  [[buffer(0)]],
-    device float* densityG  [[buffer(1)]],
-    device float* densityB  [[buffer(2)]],
-    constant uint& width    [[buffer(3)]],
-    constant uint& height   [[buffer(4)]],
-    constant uint& cellcount [[buffer(5)]],
+    device float* pressure  [[buffer(0)]],
+    constant uint& width    [[buffer(1)]],
+    constant uint& height   [[buffer(2)]],
+    constant uint& cellcount [[buffer(3)]],
     uint gid [[thread_position_in_grid]]
 ){
     
@@ -388,26 +386,18 @@ kernel void boundaryPressure(
         int index_top = gid;
         int index_bottom = cellcount - width + gid;
 
-        densityR[index_top] = densityR[index_top+width];
-        densityG[index_top] = densityG[index_top+width];
-        densityB[index_top] = densityB[index_top+width];
-        
-        densityR[index_bottom] = densityR[index_bottom-width];
-        densityG[index_bottom] = densityG[index_bottom-width];
-        densityB[index_bottom] = densityB[index_bottom-width];
+       pressure[index_top] = pressure[index_top+width];
+       
+       pressure[index_bottom] = pressure[index_bottom-width];
     }
 
     if(gid<height){
         int index_left = gid*width;
         int index_right = (width-1) + gid*width;
 
-        densityR[index_left] = densityR[index_left+1];
-        densityG[index_left] = densityG[index_left+1];
-        densityB[index_left] = densityB[index_left+1];
-        
-        densityR[index_right] = densityR[index_right-1];
-        densityG[index_right] = densityG[index_right-1];
-        densityB[index_right] = densityB[index_right-1];
+       pressure[index_left] =pressure[index_left+1];
+       
+       pressure[index_right] =pressure[index_right-1];
     }
     
 }
@@ -547,7 +537,7 @@ kernel void diffuseDensity(
         densityR[index-width] + 
         densityR[index+width];
 
-    float neighbourSum_R = 
+    float neighbourSum_G = 
         densityG[index-1] +
         densityG[index+1] + 
         densityG[index-width] + 
@@ -563,10 +553,10 @@ kernel void diffuseDensity(
     (densityR_prev[index] + dt * diff_co * neighbourSum_R)/ denom;
 
     scratch_G[index] = 
-    (densityR_prev[index] + dt * diff_co * neighbourSum_G)/ denom;
+    (densityG_prev[index] + dt * diff_co * neighbourSum_G)/ denom;
 
     scratch_B[index] = 
-    (densityR_prev[index] + dt * diff_co * neighbourSum_B)/ denom;
+    (densityB_prev[index] + dt * diff_co * neighbourSum_B)/ denom;
         
 }
 
@@ -587,4 +577,59 @@ kernel void copyDensity(
     densityR[gid] = densityR_prev[gid];
     densityG[gid] = densityG_prev[gid];
     densityB[gid] = densityB_prev[gid];
+}
+
+kernel void solvePressure(
+    device float* pressure [[buffer(0)]],
+    device const float* pressure_prev [[buffer(1)]],
+    device const float* divergence [[buffer(2)]],
+    constant uint& width [[buffer(3)]],
+    constant uint& height [[buffer(4)]],
+    constant uint& cellcount [[buffer(5)]],
+    uint2 gid                [[thread_position_in_grid]]
+){
+    if(gid.y*width+gid.x>=cellcount){
+        return;
+    }
+
+    if(gid.x ==0 || gid.x == width-1 || gid.y == 0 || gid.y == height-1){
+        return;
+    }
+
+    uint index = gid.y*width+gid.x;
+
+    float xl = pressure_prev[index-1];
+    float xr = pressure_prev[index+1];
+    float yt = pressure_prev[index+1]; 
+    float yb = pressure_prev[index-1];
+
+    pressure[index] = (xl+xr+yt+yb -divergence[index])*0.25f;
+
+
+}
+
+kernel void computeDivergence(
+    device const float* u_velocity [[buffer(0)]],
+    device const float* v_velocity [[buffer(1)]],
+    device float* divergence [[buffer(2)]],
+    constant uint& width [[buffer(3)]],
+    constant uint& height [[buffer(4)]],
+    constant uint& cellcount [[buffer(5)]],
+    uint2 gid                [[thread_position_in_grid]]
+){
+    if(gid.y*width+gid.x>=cellcount){
+        return;
+    }
+
+    if(gid.x ==0 || gid.x == width-1 || gid.y == 0 || gid.y == height-1){
+        return;
+    }
+
+    uint index = gid.y*width+gid.x;
+
+    float dx = (u_velocity[index+1] - u_velocity[index-1]) *.5;
+    float dy = (v_velocity[index+1] - v_velocity[index-1]) *.5;
+
+    divergence[index] = dx+dy;
+
 }

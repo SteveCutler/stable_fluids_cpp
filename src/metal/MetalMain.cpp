@@ -16,14 +16,17 @@ int main()
     constexpr int seed = 42;
 
     //SET WIDTH AND HEIGHT
-    constexpr unsigned int width = 1024;
-    constexpr unsigned int height = 1024;    
+    constexpr unsigned int width = 512;
+    constexpr unsigned int height = 512;    
 
     constexpr std::size_t cellCount = width*height;
     constexpr std::size_t bytesize = sizeof(float)*cellCount;
     
     //timestep
     constexpr float dt = 1/15.f;
+
+    //clear buffer flag
+    bool clear = false;
 
     //autorelease pool
     NS::AutoreleasePool* pool =
@@ -70,35 +73,35 @@ int main()
     //SLIDER UI//
 
     //Grabbing slider controlled variable references
-    // float* buoyancy = &grid.m_buoyancy;
-    // float* diffusion = &grid.m_diff_co;
-    // float* decay = &grid.m_decay;
-    // float* curl_mult = &grid.m_curl_mult;
-    // float* noise_freq = &grid.m_noise_freq;
+    float* buoyancy = &metalgrid.m_buoyancy;
+    float* diffusion = &metalgrid.m_diff_co;
+    float* decay = &metalgrid.m_decay;
+    float* curl_mult = &metalgrid.m_curl_mult;
+    float* noise_freq = &metalgrid.m_noise_freq;
     
 
     //Slider placement variable
     float slider_right = 130.f;
     
     //Sliders
-    // Slider buoyancy_slider("Buoyancy", {width-slider_right, 20.f},0.f, 100.f, buoyancy);
-    // Slider diffusion_slider("Diffusion", {width-slider_right, 50.f},0.f,20.f, diffusion);
-    // Slider decay_slider("Decay", {width-slider_right, 80.f},0.95f, 0.9999f, decay);
-    // Slider curl_mult_slider("Noise Strength", {width-slider_right, 110.f},0.f, 2000.f, curl_mult);
-    // Slider noise_freq_slider("Noise Freq.", {width-slider_right, 140.f},0.025f, .07f, noise_freq);
+    Slider buoyancy_slider("Buoyancy", {width-slider_right, 20.f},0.f, 100.f, buoyancy);
+    Slider diffusion_slider("Diffusion", {width-slider_right, 50.f},0.f,20.f, diffusion);
+    Slider decay_slider("Decay", {width-slider_right, 80.f},0.95f, 0.9999f, decay);
+    Slider curl_mult_slider("Noise Strength", {width-slider_right, 110.f},0.f, 2000.f, curl_mult);
+    Slider noise_freq_slider("Noise Freq.", {width-slider_right, 140.f},0.025f, .07f, noise_freq);
     
     //Active slider state buffer
-   // Slider* active_slider = nullptr;
+   Slider* active_slider = nullptr;
 
     //Sliders vector container
-    // std::vector<Slider*> Sliders{
-    //     &buoyancy_slider,
-    //     &diffusion_slider,
-    //     &decay_slider,
-    //     &curl_mult_slider,
-    //     &noise_freq_slider
+    std::vector<Slider*> Sliders{
+        &buoyancy_slider,
+        &diffusion_slider,
+        &decay_slider,
+        &curl_mult_slider,
+        &noise_freq_slider
         
-    // };
+    };
 
     //CONTROL DISPLAYS
 
@@ -156,61 +159,60 @@ int main()
             if (event->is<sf::Event::Closed>())
                 window.close();
 
-            // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-            //     if (key->code == sf::Keyboard::Key::V) {
-            //         arrow_viz = !arrow_viz;
-            //         }
-            //     }
+            if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (key->code == sf::Keyboard::Key::V) {
+                    arrow_viz = !arrow_viz;
+                    }
+                }
 
-            // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-            //     if (key->code == sf::Keyboard::Key::P) {
-            //         paused = !paused;
-            //         }
-            //     }
+            if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (key->code == sf::Keyboard::Key::P) {
+                    paused = !paused;
+                    }
+                }
 
-            // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-            //     if (key->code == sf::Keyboard::Key::R) {
-            //         metalgrid.reset_density();
-            //         }
-            //     }
+            if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (key->code == sf::Keyboard::Key::R) {
+                    clear=true;
+                    }
+                }
 
-            // if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-            //     if (key->code == sf::Keyboard::Key::M) {
-            //         grid.m_mult_threaded = !grid.m_mult_threaded;
-            //         }
-            //     }
 
-        //     if(event->getIf<sf::Event::MouseButtonPressed>()){
-        //         sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
-        //         sf::Vector2f mousePos = window.mapPixelToCoords(mousePixel);
+            if(event->getIf<sf::Event::MouseButtonPressed>()){
+                sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+                sf::Vector2f mousePos = window.mapPixelToCoords(mousePixel);
 
-        //         for(auto& slider : Sliders){
-        //             if(slider->contains(mousePos)){
-        //                 active_slider = slider;
-        //                 break;
-        //             }
+                for(auto& slider : Sliders){
+                    if(slider->contains(mousePos)){
+                        active_slider = slider;
+                        break;
+                    }
                 
-        //         }
-        //     }
+                }
+            }
 
-        //     if (event->getIf<sf::Event::MouseButtonReleased>()) {
-        //         if (active_slider) {
-        //             active_slider->dragging = false;
-        //             active_slider = nullptr;
-        //         }
-        //     }
+            if (event->getIf<sf::Event::MouseButtonReleased>()) {
+                if (active_slider) {
+                    active_slider->dragging = false;
+                    active_slider = nullptr;
+                }
+            }
             
         }
         
-        // if(active_slider){
-        //     active_slider->dragging = true;
-        //     active_slider->updateFromMouse(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
-        // }
+        if(active_slider){
+            active_slider->dragging = true;
+            active_slider->updateFromMouse(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+        }
         
 
         // UPDATE //
         if(!paused){
             metalgrid.update(dt);
+            if(clear){
+                metalgrid.ClearBuffers();
+                clear=false;
+            }
             renderer.update(metalgrid, arrow_viz);
             
         }
@@ -224,15 +226,15 @@ int main()
         renderer.draw(window, arrow_viz);
         
         //slider drawing
-        // for( auto& slider : Sliders){
-        //     slider->draw(window);
-        // }
+        for( auto& slider : Sliders){
+            slider->draw(window);
+        }
 
         //draw instructions
-        // for( auto& instruction : Instructions){
-        //     window.draw(instruction);
-        // }
-        // window.draw(stepDisplay);
+        for( auto& instruction : Instructions){
+            window.draw(instruction);
+        }
+        window.draw(stepDisplay);
 
         // display
         window.display();

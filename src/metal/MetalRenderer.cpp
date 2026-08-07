@@ -28,9 +28,9 @@ m_sprite(m_texture)
     m_sprite.setScale(m_scale);
 
     //Performance debug text intializing
-    // fpsText.setCharacterSize(12);
-    // fpsText.setFillColor(sf::Color::White);
-    // fpsText.setPosition({5.f, 2.f});
+    fpsText.setCharacterSize(12);
+    fpsText.setFillColor(sf::Color::White);
+    fpsText.setPosition({5.f, 2.f});
   
     // msText.setCharacterSize(12);
     // msText.setFillColor(sf::Color::White);
@@ -80,16 +80,16 @@ m_sprite(m_texture)
 
 void MetalRenderer::update(const MetalGrid& grid, bool arrow_viz){
     // calc elapsed time
-        //float elapsed = m_clock.restart().asSeconds();
+        float elapsed = m_clock.restart().asSeconds();
         
 
         // calculate performance values
-        //float fps = 1.f / elapsed;
-        //float ms = elapsed;
+        float fps = 1.f / elapsed;
+        float ms = elapsed;
 
 
         // overlay strings
-        // setString(fpsText,"\nFPS: " + std::to_string(static_cast<int>(fps)));
+        setString(fpsText,"\nFPS: " + std::to_string(static_cast<int>(fps)));
         // setString(msText,"\nFrame ms: " + std::to_string(ms));
         // setString(noise,"\nNoise ms: " + std::to_string(grid.time_noise()));
         // setString(vel,"\nVel ms: " + std::to_string(grid.time_vel()));
@@ -104,11 +104,11 @@ void MetalRenderer::update(const MetalGrid& grid, bool arrow_viz){
 
 
 
-        // const auto& u_velocity = grid.u_velocity();
-        // const auto& v_velocity = grid.v_velocity();
         
         //Creating arrow vector
         // if(arrow_viz){
+        //     const auto& u_velocity = grid.u_velocity();
+        //     const auto& v_velocity = grid.v_velocity();
         //     std::size_t index=0;
         //     for (std::size_t y = 0; y<m_height; y+=16){
         //         std::size_t row = y*m_width;
@@ -159,7 +159,7 @@ void MetalRenderer::draw(sf::RenderWindow& window, bool arrow_viz){
         // }
 
         //render debug text
-        // window.draw(fpsText);
+        window.draw(fpsText);
         // window.draw(msText);
 
         //kernel profiling text

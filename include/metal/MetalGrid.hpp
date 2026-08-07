@@ -29,14 +29,15 @@ class MetalGrid
 
         //public functions
         void update(float dt);
-        void reset_density();
+        void ClearBuffers();
+        //void reset_density();
 
         //field getters
         const std::vector<float>& density_r() const;
         const std::vector<float>& density_g() const;
         const std::vector<float>& density_b() const;
-        const std::vector<float>& u_velocity() const;
-        const std::vector<float>& v_velocity() const;
+        const std::vector<float>& get_Uvelocity() const;
+        const std::vector<float>& get_Vvelocity() const;
         const std::vector<float>& get_noise() const;
         std::span<const std::uint8_t> get_pixels() const;
 
@@ -72,14 +73,19 @@ class MetalGrid
         
         void encodeDiffuseVelocity(MTL::ComputeCommandEncoder* encoder, float dt);
         void encodeDiffuseDensity(MTL::ComputeCommandEncoder* encoder, float dt, float denom);
+        void densityDiffusionHelper(MTL::ComputeCommandEncoder* encoder, float dt);
 
         void encodeBoundaryDensity(MTL::ComputeCommandEncoder* encoder);
         void encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder);
+        void encodeBoundaryDivergence(MTL::ComputeCommandEncoder* encoder);
         void encodeBoundaryPressure(MTL::ComputeCommandEncoder* encoder);
         void encodeCopyDensity(MTL::ComputeCommandEncoder* encoder);
-
-        void densityDiffusionHelper(MTL::ComputeCommandEncoder* encoder, float dt);
         
+        
+        void encodeComputeDivergence(MTL::ComputeCommandEncoder* encoder);
+        void encodeSolvePressure(MTL::ComputeCommandEncoder* encoder);
+        void solvePressureHelper(MTL::ComputeCommandEncoder* encoder);
+        void encodeProjectPressure(MTL::ComputeCommandEncoder* encoder);
         
 
         size_t calcPos(size_t x, size_t y);
@@ -169,6 +175,9 @@ class MetalGrid
         MTL::ComputePipelineState* m_boundaryPressureKernel;
         MTL::ComputePipelineState* m_diffuseVelocityKernel;
         MTL::ComputePipelineState* m_diffuseDensityKernel;
+        MTL::ComputePipelineState* m_divergenceKernel;
+        MTL::ComputePipelineState* m_solvePressureKernel;
+        MTL::ComputePipelineState* m_projectKernel;
         MTL::ComputePipelineState* m_copyDensityKernel;
         
         //Threading Variables
@@ -208,12 +217,15 @@ class MetalGrid
         MTL::Buffer* m_u_velocity_prev;
         MTL::Buffer* m_v_velocity_prev;
 
+        MTL::Buffer* m_divergence;
+        MTL::Buffer* m_pressure;
+        MTL::Buffer* m_pressure_prev;
+
         std::vector<float> m_noise;
 
-        MTL::Buffer* m_pressure;
-        std::vector<float> m_pressure_prev;
 
-        std::vector<float> m_divergence;
+
+
         
         //sim logic
         bool m_first_frame;
