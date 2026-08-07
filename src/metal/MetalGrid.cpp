@@ -17,8 +17,8 @@ MetalGrid::MetalGrid(
 
     m_pixels(nullptr),
     m_buoyancy(2.f),
-    m_diff_co(4.5f),
-    m_viscosity(3.00f),
+    m_diff_co(1.5f),
+    m_viscosity(0.00f),
     m_decay(0.995f),
     m_curl_mult(10),
     m_noise_freq(0.05f),
@@ -58,8 +58,10 @@ MetalGrid::MetalGrid(
     m_u_velocity(nullptr),
     m_v_velocity(nullptr),
     m_noiseField(nullptr),
+    m_diffusion_scratch_r(nullptr),
+    m_diffusion_scratch_g(nullptr),
+    m_diffusion_scratch_b(nullptr),
 
-    m_diffusion_scratch(width*height,0.f),
     m_diffusion_iterations{20},
 
     m_advectVelKernel(nullptr),
@@ -73,6 +75,7 @@ MetalGrid::MetalGrid(
     m_boundaryPressureKernel(nullptr),
     m_diffuseVelocityKernel(nullptr),
     m_diffuseDensityKernel(nullptr),
+    m_copyDensityKernel(nullptr),
 
     m_density_r_prev(nullptr),
     m_density_g_prev(nullptr),
@@ -164,12 +167,19 @@ MetalGrid::MetalGrid(
             return; 
         }
 
-        // m_diffuseDensityKernel = m_metalcontext.CreatePipelineState("diffuseDensity");
+        m_diffuseDensityKernel = m_metalcontext.CreatePipelineState("diffuseDensity");
     
-        // if(m_boundaryPressureKernel == nullptr){
-        //     std::cerr << "problem creating density diffusion kernel" << std::endl;
-        //     return; 
-        // }
+        if(m_boundaryPressureKernel == nullptr){
+            std::cerr << "problem creating density diffusion kernel" << std::endl;
+            return; 
+        }
+
+        m_copyDensityKernel = m_metalcontext.CreatePipelineState("copyDensity");
+    
+        if(m_copyDensityKernel == nullptr){
+            std::cerr << "problem creating copy density kernel" << std::endl;
+            return; 
+        }
 
         // initialize buffers
         m_density_r = m_metalcontext.get_device()->newBuffer(
@@ -197,6 +207,18 @@ MetalGrid::MetalGrid(
             MTL::ResourceStorageModeShared
         );
         m_pressure = m_metalcontext.get_device()->newBuffer(
+            m_bytesize,
+            MTL::ResourceStorageModeShared
+        );
+        m_diffusion_scratch_r = m_metalcontext.get_device()->newBuffer(
+            m_bytesize,
+            MTL::ResourceStorageModeShared
+        );
+        m_diffusion_scratch_g = m_metalcontext.get_device()->newBuffer(
+            m_bytesize,
+            MTL::ResourceStorageModeShared
+        );
+        m_diffusion_scratch_b = m_metalcontext.get_device()->newBuffer(
             m_bytesize,
             MTL::ResourceStorageModeShared
         );
@@ -240,6 +262,9 @@ MetalGrid::MetalGrid(
             m_v_velocity == nullptr ||
             m_u_velocity == nullptr ||
             m_noiseField == nullptr ||
+            m_diffusion_scratch_r == nullptr ||
+            m_diffusion_scratch_g == nullptr ||
+            m_diffusion_scratch_b == nullptr ||
             m_pressure == nullptr ||
             m_density_r_prev == nullptr ||
             m_density_g_prev == nullptr || 
@@ -257,6 +282,9 @@ MetalGrid::MetalGrid(
                 if (m_u_velocity != nullptr) m_u_velocity->release();
                 if (m_v_velocity != nullptr) m_v_velocity->release();
                 if (m_noiseField != nullptr) m_noiseField->release();
+                if (m_diffusion_scratch_r != nullptr) m_noiseField->release();
+                if (m_diffusion_scratch_g != nullptr) m_noiseField->release();
+                if (m_diffusion_scratch_b != nullptr) m_noiseField->release();
                 if (m_pressure != nullptr) m_noiseField->release();
                 if (m_density_r_prev != nullptr) m_density_r->release();
                 if (m_density_g_prev != nullptr) m_density_g->release();
@@ -275,6 +303,9 @@ MetalGrid::MetalGrid(
         float* u = static_cast<float*>(m_u_velocity->contents());
         float* v = static_cast<float*>(m_v_velocity->contents());
         float* nf = static_cast<float*>(m_noiseField->contents());
+        float* ds_r = static_cast<float*>(m_diffusion_scratch_r->contents());
+        float* ds_g = static_cast<float*>(m_diffusion_scratch_g->contents());
+        float* ds_b = static_cast<float*>(m_diffusion_scratch_b->contents());
         float* pr = static_cast<float*>(m_pressure->contents());
         float* r_prev = static_cast<float*>(m_density_r_prev->contents());
         float* g_prev = static_cast<float*>(m_density_g_prev->contents());
@@ -290,6 +321,9 @@ MetalGrid::MetalGrid(
         std::fill_n(u,m_cellcount,0.f);
         std::fill_n(v,m_cellcount,0.f);
         std::fill_n(nf,m_cellcount,0.f);
+        std::fill_n(ds_r,m_cellcount,0.f);
+        std::fill_n(ds_g,m_cellcount,0.f);
+        std::fill_n(ds_b,m_cellcount,0.f);
         std::fill_n(pr,m_cellcount,0.f);
         std::fill_n(r_prev,m_cellcount,0.f);
         std::fill_n(g_prev,m_cellcount,0.f);
@@ -362,7 +396,7 @@ void MetalGrid::update(float dt){
     encodeDiffuseVelocity(encoder, dt);
     
     //encode boundary velocity
-    //encodeBoundaryVelocity(encoder);
+    encodeBoundaryVelocity(encoder);
 
     
     //encode emitter kernel
@@ -373,6 +407,13 @@ void MetalGrid::update(float dt){
     std::swap(m_density_r, m_density_r_prev);
     std::swap(m_density_g, m_density_g_prev);
     std::swap(m_density_b, m_density_b_prev);
+
+    densityDiffusionHelper(encoder, dt);
+
+    std::swap(m_density_r, m_density_r_prev);
+    std::swap(m_density_g, m_density_g_prev);
+    std::swap(m_density_b, m_density_b_prev);
+
     
     //encode density advection
     encodeDensityAdvection(encoder, dt);
@@ -890,7 +931,6 @@ void MetalGrid::encodeDiffuseVelocity(MTL::ComputeCommandEncoder* encoder, float
         sizeof(total),
         8);
 
-    std::uint32_t edge_length =  static_cast<std::uint32_t>(std::max(width,height));
 
 
     //set number of threads for kernel
@@ -905,6 +945,116 @@ void MetalGrid::encodeDiffuseVelocity(MTL::ComputeCommandEncoder* encoder, float
     );
 };
 
+void MetalGrid::encodeDiffuseDensity(MTL::ComputeCommandEncoder* encoder, float dt, float denom){
+   
+    encoder->setComputePipelineState(m_diffuseDensityKernel);
+
+    //bind the buffers
+    encoder->setBuffer(m_density_r, 0, 0);
+    encoder->setBuffer(m_density_g, 0, 1);
+    encoder->setBuffer(m_density_b, 0, 2);
+    encoder->setBuffer(m_density_r_prev, 0, 3);
+    encoder->setBuffer(m_density_g_prev, 0, 4);
+    encoder->setBuffer(m_density_b_prev, 0, 5);
+    encoder->setBuffer(m_diffusion_scratch_r, 0, 6);
+    encoder->setBuffer(m_diffusion_scratch_g, 0, 7);
+    encoder->setBuffer(m_diffusion_scratch_b, 0, 8);
+
+
+    std::uint32_t width = static_cast<std::uint32_t>(m_width);
+    std::uint32_t height = static_cast<std::uint32_t>(m_height);
+    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
+
+    encoder->setBytes(&dt,
+        sizeof(dt),
+        9);
+    encoder->setBytes(&m_diff_co,
+        sizeof(m_diff_co),
+        10);
+
+    encoder->setBytes(&width,
+        sizeof(width),
+        11);
+    encoder->setBytes(&height,
+        sizeof(height),
+        12);
+    encoder->setBytes(&denom,
+        sizeof(denom),
+        13);
+
+
+
+    encoder->setBytes(&total,
+        sizeof(total),
+        14);
+
+
+
+
+    //set number of threads for kernel
+    MTL::Size gridSize(width, height, 1);
+
+
+    MTL::Size threadgroupSize(16, 16, 1);
+
+    encoder->dispatchThreads(
+        gridSize,
+        threadgroupSize
+    );
+};
+void MetalGrid::encodeCopyDensity(MTL::ComputeCommandEncoder* encoder){
+   
+    encoder->setComputePipelineState(m_copyDensityKernel);
+
+    //bind the buffers
+    encoder->setBuffer(m_density_r, 0, 0);
+    encoder->setBuffer(m_density_g, 0, 1);
+    encoder->setBuffer(m_density_b, 0, 2);
+    encoder->setBuffer(m_density_r_prev, 0, 3);
+    encoder->setBuffer(m_density_g_prev, 0, 4);
+    encoder->setBuffer(m_density_b_prev, 0, 5);
+    
+    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
+
+    encoder->setBytes(&total,
+        sizeof(total),
+        6);
+
+
+
+
+    //set number of threads for kernel
+    MTL::Size gridSize(m_cellcount, 1, 1);
+
+
+    MTL::Size threadgroupSize(256, 1, 1);
+
+    encoder->dispatchThreads(
+        gridSize,
+        threadgroupSize
+    );
+};
+
+void MetalGrid::densityDiffusionHelper(MTL::ComputeCommandEncoder* encoder, float dt){
+
+    //diffusion coefficent
+    float denom = 1.f + 4.f * m_diff_co * dt;
+
+    encodeCopyDensity(encoder);
+
+    //iteration loop
+    for(std::size_t iteration = 0; iteration < m_diffusion_iterations; iteration++){
+
+        encodeDiffuseDensity(encoder, dt, denom);
+
+        std::swap(m_density_r, m_diffusion_scratch_r);
+        std::swap(m_density_g, m_diffusion_scratch_g);
+        std::swap(m_density_b, m_diffusion_scratch_b);
+        encodeBoundaryDensity(encoder);
+        
+    }
+
+};
 std::span<const std::uint8_t> MetalGrid::get_pixels() const
 {
     auto* pixels =  static_cast<const std::uint8_t*>(

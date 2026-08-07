@@ -71,11 +71,14 @@ class MetalGrid
         void encodeDensityAdvection(MTL::ComputeCommandEncoder* encoder, float dt);
         
         void encodeDiffuseVelocity(MTL::ComputeCommandEncoder* encoder, float dt);
-        void encodeDiffuseDensity(MTL::ComputeCommandEncoder* encoder, float dt);
+        void encodeDiffuseDensity(MTL::ComputeCommandEncoder* encoder, float dt, float denom);
 
         void encodeBoundaryDensity(MTL::ComputeCommandEncoder* encoder);
         void encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder);
         void encodeBoundaryPressure(MTL::ComputeCommandEncoder* encoder);
+        void encodeCopyDensity(MTL::ComputeCommandEncoder* encoder);
+
+        void densityDiffusionHelper(MTL::ComputeCommandEncoder* encoder, float dt);
         
         
 
@@ -166,6 +169,7 @@ class MetalGrid
         MTL::ComputePipelineState* m_boundaryPressureKernel;
         MTL::ComputePipelineState* m_diffuseVelocityKernel;
         MTL::ComputePipelineState* m_diffuseDensityKernel;
+        MTL::ComputePipelineState* m_copyDensityKernel;
         
         //Threading Variables
         std::size_t m_thread_count;
@@ -193,7 +197,9 @@ class MetalGrid
         MTL::Buffer* m_v_velocity;
         MTL::Buffer* m_noiseField;
 
-        std::vector<float> m_diffusion_scratch;
+        MTL::Buffer* m_diffusion_scratch_r;
+        MTL::Buffer* m_diffusion_scratch_g;
+        MTL::Buffer* m_diffusion_scratch_b;
         std::size_t m_diffusion_iterations;
 
         MTL::Buffer* m_density_r_prev;

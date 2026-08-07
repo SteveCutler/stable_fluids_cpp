@@ -508,18 +508,83 @@ kernel void diffuseVelocity(
 
 }
 
-// kernel void diffuseDensity()(
-//     device float* densityR [[buffer(0)]],
-//     device float* densityG [[buffer(1)]],
-//     device float* densityB [[buffer(2)]],
-//     device const float* densityR_prev [[buffer(3)]],
-//     device const float* densityG_prev [[buffer(4)]],
-//     device const float* densityB_prev [[buffer(5)]],
-//     constant float& dt [[buffer(4)]],
-//     constant float& strength [[buffer(5)]],
-//     constant float& viscosity [[buffer(6)]],
-//     constant uint& width [[buffer(7)]],
-//     constant uint& height [[buffer(8)]],
-//     uint2 gid               [[thread_position_in_grid]]){
-//         return;
-//     }
+kernel void diffuseDensity(
+    device float* densityR [[buffer(0)]],
+    device float* densityG [[buffer(1)]],
+    device float* densityB [[buffer(2)]],
+    device const float* densityR_prev [[buffer(3)]],
+    device const float* densityG_prev [[buffer(4)]],
+    device const float* densityB_prev [[buffer(5)]],
+    device float* scratch_R [[buffer(6)]],
+    device float* scratch_G [[buffer(7)]],
+    device float* scratch_B [[buffer(8)]],
+    constant float& dt [[buffer(9)]],
+    constant float& diff_co [[buffer(10)]],
+    constant uint& width [[buffer(11)]],
+    constant uint& height [[buffer(12)]],
+    constant float& denom [[buffer(13)]],
+    constant uint& cellcount [[buffer(14)]],
+    uint2 gid               [[thread_position_in_grid]]
+    ){
+
+    //boundary checks
+    if((gid.y*width + gid.x) >= cellcount){
+        return;
+    }
+
+    if (gid.x == 0 || gid.x >= width - 1 ||
+        gid.y == 0 || gid.y >= height - 1) {
+        return;
+    }
+    //iteration setup
+
+
+    uint index = gid.y*width + gid.x;
+
+    float neighbourSum_R = 
+        densityR[index-1] +
+        densityR[index+1] + 
+        densityR[index-width] + 
+        densityR[index+width];
+
+    float neighbourSum_R = 
+        densityG[index-1] +
+        densityG[index+1] + 
+        densityG[index-width] + 
+        densityG[index+width];
+
+    float neighbourSum_B = 
+        densityB[index-1] +
+        densityB[index+1] + 
+        densityB[index-width] + 
+        densityB[index+width];
+
+    scratch_R[index] = 
+    (densityR_prev[index] + dt * diff_co * neighbourSum_R)/ denom;
+
+    scratch_G[index] = 
+    (densityR_prev[index] + dt * diff_co * neighbourSum_G)/ denom;
+
+    scratch_B[index] = 
+    (densityR_prev[index] + dt * diff_co * neighbourSum_B)/ denom;
+        
+}
+
+
+kernel void copyDensity(
+    device float* densityR [[buffer(0)]],
+    device float* densityG [[buffer(1)]],
+    device float* densityB [[buffer(2)]],
+    device const float* densityR_prev [[buffer(3)]],
+    device const float* densityG_prev [[buffer(4)]],
+    device const float* densityB_prev [[buffer(5)]],
+    constant uint& cellcount [[buffer(6)]],
+    uint gid                [[thread_position_in_grid]]
+){
+    if(gid>=cellcount){
+        return;
+    }
+    densityR[gid] = densityR_prev[gid];
+    densityG[gid] = densityG_prev[gid];
+    densityB[gid] = densityB_prev[gid];
+}
