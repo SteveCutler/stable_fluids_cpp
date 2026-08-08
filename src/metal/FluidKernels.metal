@@ -579,34 +579,6 @@ kernel void copyDensity(
     densityB[gid] = densityB_prev[gid];
 }
 
-kernel void solvePressure(
-    device float* pressure [[buffer(0)]],
-    device const float* pressure_prev [[buffer(1)]],
-    device const float* divergence [[buffer(2)]],
-    constant uint& width [[buffer(3)]],
-    constant uint& height [[buffer(4)]],
-    constant uint& cellcount [[buffer(5)]],
-    uint2 gid                [[thread_position_in_grid]]
-){
-    if(gid.y*width+gid.x>=cellcount){
-        return;
-    }
-
-    if(gid.x ==0 || gid.x == width-1 || gid.y == 0 || gid.y == height-1){
-        return;
-    }
-
-    uint index = gid.y*width+gid.x;
-
-    float xl = pressure_prev[index-1];
-    float xr = pressure_prev[index+1];
-    float yt = pressure_prev[index+1]; 
-    float yb = pressure_prev[index-1];
-
-    pressure[index] = (xl+xr+yt+yb -divergence[index])*0.25f;
-
-
-}
 
 kernel void computeDivergence(
     device const float* u_velocity [[buffer(0)]],
@@ -628,8 +600,69 @@ kernel void computeDivergence(
     uint index = gid.y*width+gid.x;
 
     float dx = (u_velocity[index+1] - u_velocity[index-1]) *.5;
-    float dy = (v_velocity[index+1] - v_velocity[index-1]) *.5;
+    float dy = (v_velocity[index+width] - v_velocity[index-width]) *.5;
 
     divergence[index] = dx+dy;
+
+}
+
+kernel void solvePressure(
+    device float* pressure [[buffer(0)]],
+    device const float* pressure_prev [[buffer(1)]],
+    device const float* divergence [[buffer(2)]],
+    constant uint& width [[buffer(3)]],
+    constant uint& height [[buffer(4)]],
+    constant uint& cellcount [[buffer(5)]],
+    uint2 gid                [[thread_position_in_grid]]
+){
+    if(gid.y*width+gid.x>=cellcount){
+        return;
+    }
+
+    if(gid.x ==0 || gid.x == width-1 || gid.y == 0 || gid.y == height-1){
+        return;
+    }
+
+    uint index = gid.y*width+gid.x;
+
+    float xl = pressure_prev[index-1];
+    float xr = pressure_prev[index+1];
+    float yt = pressure_prev[index+width]; 
+    float yb = pressure_prev[index-width];
+
+    pressure[index] = (xl+xr+yt+yb - divergence[index])*0.25f;
+
+
+}
+
+kernel void project(
+    device const float* pressure [[buffer(0)]],
+    device float* u_velocity [[buffer(1)]],
+    device float* v_velocity [[buffer(2)]],
+    constant uint& width [[buffer(3)]],
+    constant uint& height [[buffer(4)]],
+    constant uint& cellcount [[buffer(5)]],
+    uint2 gid                [[thread_position_in_grid]]
+){
+    if(gid.y*width+gid.x>=cellcount){
+        return;
+    }
+
+    if(gid.x ==0 || gid.x == width-1 || gid.y == 0 || gid.y == height-1){
+        return;
+    }
+
+    uint index = gid.y*width+gid.x;
+
+    float xl = pressure[index-1];
+    float xr = pressure[index+1];
+    float yt = pressure[index+width]; 
+    float yb = pressure[index-width];
+    
+    float u_project = (xr-xl)/2;
+    float v_project = (yt-yb)/2;
+
+    u_velocity[index] -= u_project;
+    v_velocity[index] -= v_project;
 
 }

@@ -175,7 +175,7 @@ MetalGrid::MetalGrid(
 
         m_diffuseDensityKernel = m_metalcontext.CreatePipelineState("diffuseDensity");
     
-        if(m_boundaryPressureKernel == nullptr){
+        if(m_diffuseDensityKernel == nullptr){
             std::cerr << "problem creating density diffusion kernel" << std::endl;
             return; 
         }
@@ -191,20 +191,22 @@ MetalGrid::MetalGrid(
         m_divergenceKernel = m_metalcontext.CreatePipelineState("computeDivergence");
     
         if(m_divergenceKernel == nullptr){
-            std::cerr << "problem creating copy density kernel" << std::endl;
+            std::cerr << "problem creating divergence kernel" << std::endl;
             return; 
         }
+
         
         m_solvePressureKernel = m_metalcontext.CreatePipelineState("solvePressure");
     
         if(m_solvePressureKernel == nullptr){
-            std::cerr << "problem creating copy density kernel" << std::endl;
+            std::cerr << "problem creating pressure solver kernel" << std::endl;
             return; 
         }
-        m_projectKernel = m_metalcontext.CreatePipelineState("solvePressure");
+
+        m_projectKernel = m_metalcontext.CreatePipelineState("project");
     
         if(m_projectKernel == nullptr){
-            std::cerr << "problem creating pressure solve kernel" << std::endl;
+            std::cerr << "problem creating projection kernel" << std::endl;
             return; 
         }
 
@@ -457,6 +459,13 @@ void MetalGrid::update(float dt){
 
     //compute Pressure
     solvePressureHelper(encoder);
+
+    encodeBoundaryPressure(encoder);
+
+    encodeProjectPressure(encoder);
+
+    encodeBoundaryVelocity(encoder);
+
 
     
     //encode emitter kernel
@@ -1178,6 +1187,41 @@ void MetalGrid::encodeSolvePressure(MTL::ComputeCommandEncoder* encoder){
 }
 
 void MetalGrid::encodeProjectPressure(MTL::ComputeCommandEncoder* encoder){
+     //load the kernel
+    encoder->setComputePipelineState(m_projectKernel);
+
+    //bind the buffers
+    encoder->setBuffer(m_pressure, 0, 0);
+    encoder->setBuffer(m_u_velocity, 0, 1);
+    encoder->setBuffer(m_v_velocity, 0, 2);
+
+    std::uint32_t width = static_cast<std::uint32_t>(m_width);
+    std::uint32_t height = static_cast<std::uint32_t>(m_height);
+    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
+
+    
+    encoder->setBytes(&width,sizeof(width),3);
+    encoder->setBytes(&height,sizeof(height),4);
+    
+
+    encoder->setBytes(&total,
+        sizeof(total),
+        5);
+
+
+
+
+    //set number of threads for kernel
+    MTL::Size gridSize(width, height, 1);
+
+
+    MTL::Size threadgroupSize(256, 1, 1);
+
+    encoder->dispatchThreads(
+        gridSize,
+        threadgroupSize
+    );
+    
     return;
 }
 //Boundary Setter Functions
@@ -1252,10 +1296,6 @@ void MetalGrid::encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder){
     );
 };
 
-
-void MetalGrid::encodeBoundaryDivergence(MTL::ComputeCommandEncoder* encoder){
-    return;
-};
 
 void MetalGrid::encodeBoundaryPressure(MTL::ComputeCommandEncoder* encoder){
     encoder->setComputePipelineState(m_boundaryPressureKernel);
@@ -1336,6 +1376,7 @@ void MetalGrid::solvePressureHelper(MTL::ComputeCommandEncoder* encoder){
     
     std::swap(m_pressure, m_pressure_prev);
 };
+
 std::span<const std::uint8_t> MetalGrid::get_pixels() const
 {
     auto* pixels =  static_cast<const std::uint8_t*>(
