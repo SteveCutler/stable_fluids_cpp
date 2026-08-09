@@ -16,18 +16,21 @@ MetalGrid::MetalGrid(
 
 
     m_pixels(nullptr),
-    m_buoyancy(2.f),
+    m_buoyancy(20.f),
     m_diff_co(1.5f),
     m_viscosity(0.00f),
     m_decay(0.995f),
     m_curl_mult(10),
     m_noise_freq(0.05f),
     m_noiseTimeMult(1.f),
+    m_noise_strength(2.f),
+
+    m_gpuwaittime(0),
+    m_cpuwaittime(0),
    
     m_u_velocity(nullptr),
     m_v_velocity(nullptr),
 
-    m_noise_strength(2.f),
     m_seed(seed),
     m_width(width),
     m_height(height),
@@ -35,7 +38,7 @@ MetalGrid::MetalGrid(
     m_bytesize(bytesize),
     m_metalcontext(MetalContext),
 
-    m_vel_decay(0.99f),
+    m_vel_decay(0.994f),
     m_source(50.f),
     m_elapsed(0.f),
     m_pressure_iter(20),
@@ -500,8 +503,18 @@ void MetalGrid::update(float dt){
     //submit the work and wait for completion.
 
     commandBuffer->commit();
+    const auto waitStart = std::chrono::steady_clock::now();
+    
     commandBuffer->waitUntilCompleted();
+    const auto waitEnd = std::chrono::steady_clock::now();
 
+    //gpu computation time logic
+    m_gpuwaittime = (commandBuffer->GPUEndTime() - commandBuffer->GPUStartTime()) * 1000;
+    
+    //gpu computation time logic
+    m_cpuwaittime = std::chrono::duration<double, std::milli>((waitEnd - waitStart)).count();
+    
+    
     if (commandBuffer->status() == MTL::CommandBufferStatusError) {
         auto* error = commandBuffer->error();
 
@@ -1386,159 +1399,29 @@ std::span<const std::uint8_t> MetalGrid::get_pixels() const
     return {pixels, m_width * m_height *4};
 }
 
-// const std::vector<float>& MetalGrid::get_Uvelocity() const
-// {
-//     std::vector<float> pixels =  static_cast<const std::uint8_t*>(
-//         m_u_velocity->contents().data();
-//     );
-
-//    // return {pixels, m_width * m_height *4};
-// }
-
-
-// void MetalGrid::reset_density();
-
-// //field getters
-// const std::vector<float>& MetalGrid::density_r(){
-    
-// } const;
-// const std::vector<float>& MetalGrid::density_g() const;
-// const std::vector<float>& MetalGrid::density_b() const;
-// const std::vector<float>& MetalGrid::u_velocity() const;
-// const std::vector<float>& MetalGrid::v_velocity() const;
-// const std::vector<float>& MetalGrid::get_noise() const;
-// const std::vector<std::uint8_t> & MetalGrid::get_pixels() const;
-
-// // vel field setter for test purposes
-// void MetalGrid::setVelocityAt(std::size_t x, std::size_t y, float u,float v);
-
-// //moved to public for divergence test purposes
-// void MetalGrid::projectStep();
-
-
-// //timing getters
-// sf::Clock m_performance_clock;
-// float MetalGrid::time_noise() const;
-// float MetalGrid::time_vel() const;
-// float MetalGrid::time_divergence() const;
-// float MetalGrid::time_pressure() const;
-// float MetalGrid::time_diffuse() const;
-// float MetalGrid::time_advect() const;
-// float MetalGrid::time_advectVel() const;
-// float MetalGrid::time_project() const;
-// float MetalGrid::time_addSource() const;
-
-// void MetalGrid::advect_decay_Threaded(float dt, const std::vector<float>& source, std::vector<float>& dest);
-// void MetalGrid::advect_decay_Rows(float dt, const std::vector<float>& source, std::vector<float>& dest, std::size_t begin, std::size_t end);
-
-// void MetalGrid::advectVel_Threaded(float dt);
-// void MetalGrid::advectVel_Rows(float dt, std::size_t begin, std::size_t end);
-
-
-
-// void MetalGrid::swapVel();
-
-// void MetalGrid::clearPressure();
-
-// void MetalGrid::calcNoise(float dt);
-// void MetalGrid::calcNoise_Threaded(float dt);
-// void MetalGrid::calcNoiseRows(float dt, std::size_t begin, std::size_t end);
-
-// void MetalGrid::calcVel_Rows(float dt, std::size_t begin, std::size_t end);
-// void MetalGrid::calcVel_Threaded(float dt);
-
-// void MetalGrid::calcDivergence_Threaded();
-// void MetalGrid::calcDivergence_Rows(std::size_t begin, std::size_t end);
-
-// //single threaded pressure solve function
-// void MetalGrid::solvePressure();
-
-// //multi threaded implementation
-// void MetalGrid::solvePressureRows(std::size_t begin, std::size_t end);
-// void MetalGrid::solvePressureThreaded();
-
-// void MetalGrid::velBoundaries();
-
-// void MetalGrid::pressureBoundaries();
-
-// void MetalGrid::project_Threaded();
-// void MetalGrid::project_Rows(std::size_t begin, std::size_t end);
-
-
-// void MetalGrid::addSource(size_t x, size_t y, float size, sf::Vector3f clr);
-
-// void MetalGrid::swapDensity();
-
-// void MetalGrid::diffuse(float dt, const std::vector<float>& source, std::vector<float>& destination);
-// void MetalGrid::diffuseJacobi_Rows(float a, const std::vector<float>& source, const std::vector<float>& current, std::vector<float>& next, std::size_t begin, std::size_t end);
-// void MetalGrid::diffuse_Threaded(float a, const std::vector<float>& source, const std::vector<float>& current,  std::vector<float>& next);
-
-// void MetalGrid::diffuseVel_Threaded(float dt);
-// void MetalGrid::diffuseVel_Rows(float dt, std::size_t begin, std::size_t end);
-
-// void MetalGrid::densityToPixels();
-
-// void MetalGrid::gen_pixels_Threaded();
-// void MetalGrid::gen_pixels_Rows(std::size_t begin, std::size_t end){
-//     for (std::size_t y = begin; y<end; y++){
-//             std::size_t row = y*m_width;
-
-//             for( std::size_t x=0; x<m_width; x++){
-//                 std::size_t i = row+x;
-                
-//                 //clamp between 0 and 1
-//                 float d_r = m_density_r[i];
-//                 float d_g = m_density_g[i];
-//                 float d_b = m_density_b[i];
-                
-                
-//                 //convert density to RGB values
-//                 std::uint8_t value_r = static_cast<std::uint8_t>(d_r * 255.f);
-//                 std::uint8_t value_g = static_cast<std::uint8_t>(d_g * 255.f);
-//                 std::uint8_t value_b = static_cast<std::uint8_t>(d_b * 255.f);
-                
-//                 //find correct position in pixel array, given each pixel has 1 components
-//                 std::size_t p = i * 4;
-                
-//                 //create greyscale image with alpha of 1
-//                 m_pixels[p] = value_r;  //R
-//                 m_pixels[p+1] = value_g;//G
-//                 m_pixels[p+2] = value_b;//B
-//                 m_pixels[p+3] = 255;  //Alpha channel
-//             }            
-//     }    
-// };
-
-// float MetalGrid::density_sample(std::size_t i) const;
-
-// void MetalGrid::scalarBoundaries(std::vector<float>& field);
 
 MetalGrid::~MetalGrid()
 {
-    if (m_density_r != nullptr) {
-        m_density_r->release();
-        m_density_r = nullptr;
-    }
+    if (m_density_r != nullptr) m_density_r->release();
+    if (m_density_g != nullptr) m_density_g->release();
+    if (m_density_b != nullptr) m_density_b->release();
+    if (m_u_velocity != nullptr) m_u_velocity->release();
+    if (m_v_velocity != nullptr) m_v_velocity->release();
+    if (m_noiseField != nullptr) m_noiseField->release();
+    if (m_diffusion_scratch_r != nullptr) m_noiseField->release();
+    if (m_diffusion_scratch_g != nullptr) m_noiseField->release();
+    if (m_diffusion_scratch_b != nullptr) m_noiseField->release();
+    if (m_pressure != nullptr) m_noiseField->release();
+    if (m_density_r_prev != nullptr) m_density_r->release();
+    if (m_density_g_prev != nullptr) m_density_g->release();
+    if (m_density_b_prev != nullptr) m_density_b->release();
+    if (m_u_velocity_prev != nullptr) m_u_velocity->release();
+    if (m_v_velocity_prev != nullptr) m_v_velocity->release();
+    if (m_divergence != nullptr) m_divergence->release();
+    if (m_pressure != nullptr) m_pressure->release();
+    if (m_pressure_prev != nullptr) m_pressure_prev->release();
+    if (m_pixels != nullptr) m_pixels->release();
 
-    if (m_density_g != nullptr) {
-        m_density_g->release();
-        m_density_g = nullptr;
-    }
-
-    if (m_density_b != nullptr) {
-        m_density_b->release();
-        m_density_b = nullptr;
-    }
-
-    if (m_u_velocity != nullptr) {
-        m_u_velocity->release();
-        m_u_velocity = nullptr;
-    }
-
-    if (m_v_velocity != nullptr) {
-        m_v_velocity->release();
-        m_v_velocity = nullptr;
-    }
 
 
     std::cout << "Metal grid destroyed and resources released" << std::endl;

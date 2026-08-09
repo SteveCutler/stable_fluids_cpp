@@ -15,6 +15,9 @@ int main()
     //Set Seed
     constexpr int seed = 42;
 
+    //frame count
+    std::size_t frameCount = 0;
+
     //SET WIDTH AND HEIGHT
     constexpr unsigned int width = 1024;
     constexpr unsigned int height = 1024;    
@@ -208,12 +211,20 @@ int main()
 
         // UPDATE //
         if(!paused){
+            
             metalgrid.update(dt);
             if(clear){
                 metalgrid.ClearBuffers();
                 clear=false;
             }
             renderer.update(metalgrid, arrow_viz);
+
+            if(frameCount%10==0){
+                std::cout << "\nGPU wait time: " << metalgrid.m_gpuwaittime << "\n";
+                std::cout << "\nCPU wait time: " << metalgrid.m_cpuwaittime << "\n";
+            }
+
+            frameCount++;
             
         }
 

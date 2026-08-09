@@ -27,6 +27,9 @@ class MetalGrid
         float m_noiseTimeMult;
         float m_noise_strength;
 
+        double m_gpuwaittime;
+        double m_cpuwaittime;
+
         // public velocity fields
         MTL::Buffer* m_u_velocity;
         MTL::Buffer* m_v_velocity;
