@@ -254,7 +254,7 @@ kernel void advectVelocity(
         float new_v_vel = (tl_v*tl_weight + tr_v*tr_weight + bl_v*bl_weight + br_v*br_weight) * velDecay;
         
         //adding buoyancy
-        new_v_vel -= buoyancy * dt ;
+        new_v_vel -= buoyancy * clamp(densitySample,0.f,1.f) * dt ;
         
         u_velocity[index] = new_u_vel;
         v_velocity[index] = new_v_vel;
@@ -328,8 +328,8 @@ kernel void generateVel(
 
     float densitySample =  clamp(max(densityR[index], max(densityG[index],densityB[index])),0.f,1.f);
 
-    u_velocity[index] += (-dy*curlMult*dt);
-    v_velocity[index] += (dx*curlMult*dt);
+    u_velocity[index] += (-dy*curlMult*dt) * clamp(densitySample,0.f,1.f);
+    v_velocity[index] += (dx*curlMult*dt) * clamp(densitySample,0.f,1.f);
     
 
 }
