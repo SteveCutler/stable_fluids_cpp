@@ -24,6 +24,8 @@ MetalGrid::MetalGrid(
     m_noise_freq(0.05f),
     m_noiseTimeMult(1.f),
    
+    m_u_velocity(nullptr),
+    m_v_velocity(nullptr),
 
     m_noise_strength(2.f),
     m_seed(seed),
@@ -55,8 +57,6 @@ MetalGrid::MetalGrid(
     m_density_r(nullptr),
     m_density_g(nullptr),
     m_density_b(nullptr),
-    m_u_velocity(nullptr),
-    m_v_velocity(nullptr),
     m_noiseField(nullptr),
     m_diffusion_scratch_r(nullptr),
     m_diffusion_scratch_g(nullptr),

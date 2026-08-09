@@ -106,36 +106,37 @@ void MetalRenderer::update(const MetalGrid& grid, bool arrow_viz){
 
         
         //Creating arrow vector
-        // if(arrow_viz){
-        //     const auto& u_velocity = grid.u_velocity();
-        //     const auto& v_velocity = grid.v_velocity();
-        //     std::size_t index=0;
-        //     for (std::size_t y = 0; y<m_height; y+=16){
-        //         std::size_t row = y*m_width;
+        if(arrow_viz){
+            const float* u_velocity = static_cast<const float*>(grid.m_u_velocity->contents());
+            const float* v_velocity = static_cast<const float*>(grid.m_v_velocity->contents());
+
+            std::size_t index=0;
+            for (std::size_t y = 0; y<m_height; y+=16){
+                std::size_t row = y*m_width;
                 
-        //         for(std::size_t x =0; x<m_width; x+=16){
-        //             std::size_t i = row+x;
+                for(std::size_t x =0; x<m_width; x+=16){
+                    std::size_t i = row+x;
                     
-        //             //extract u and v velocity directions
-        //             float u = u_velocity[i];
-        //             float v = v_velocity[i];
+                    //extract u and v velocity directions
+                    float u = u_velocity[i];
+                    float v = v_velocity[i];
                     
-        //             //create arrow points
-        //             m_arrows[index].position = sf::Vector2f(static_cast<float>(x),static_cast<float>(y));
-        //             m_arrows[index+1].position = sf::Vector2f(static_cast<float>(x+u),static_cast<float>(y+v));
+                    //create arrow points
+                    m_arrows[index].position = sf::Vector2f(static_cast<float>(x),static_cast<float>(y));
+                    m_arrows[index+1].position = sf::Vector2f(static_cast<float>(x+u),static_cast<float>(y+v));
                     
-        //             m_arrows[index+2].position = sf::Vector2f(static_cast<float>(x+u),static_cast<float>(y+v));
-        //             m_arrows[index+3].position = sf::Vector2f(static_cast<float>(x+u - u*.25 + v*.25),static_cast<float>(y+v - v*.25-u*.25));
+                    m_arrows[index+2].position = sf::Vector2f(static_cast<float>(x+u),static_cast<float>(y+v));
+                    m_arrows[index+3].position = sf::Vector2f(static_cast<float>(x+u - u*.25 + v*.25),static_cast<float>(y+v - v*.25-u*.25));
                     
-        //             m_arrows[index+4].position = sf::Vector2f(static_cast<float>(x+u),static_cast<float>(y+v));
-        //             m_arrows[index+5].position = sf::Vector2f(static_cast<float>(x+u - u*.25 - v*.25),static_cast<float>(y+v - v*.25+u*.25));
+                    m_arrows[index+4].position = sf::Vector2f(static_cast<float>(x+u),static_cast<float>(y+v));
+                    m_arrows[index+5].position = sf::Vector2f(static_cast<float>(x+u - u*.25 - v*.25),static_cast<float>(y+v - v*.25+u*.25));
                     
                     
-        //             index += 6;
-        //         }
+                    index += 6;
+                }
     
-        //     }
-        // }
+            }
+        }
 
         
         const auto& pixels = grid.get_pixels();
@@ -154,9 +155,9 @@ void MetalRenderer::draw(sf::RenderWindow& window, bool arrow_viz){
         window.draw(m_sprite);
 
         //render velocity arrows
-        // if(arrow_viz){
-        //     window.draw(m_arrows);
-        // }
+        if(arrow_viz){
+            window.draw(m_arrows);
+        }
 
         //render debug text
         window.draw(fpsText);

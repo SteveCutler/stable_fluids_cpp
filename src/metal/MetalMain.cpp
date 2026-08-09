@@ -16,8 +16,8 @@ int main()
     constexpr int seed = 42;
 
     //SET WIDTH AND HEIGHT
-    constexpr unsigned int width = 512;
-    constexpr unsigned int height = 512;    
+    constexpr unsigned int width = 1024;
+    constexpr unsigned int height = 1024;    
 
     constexpr std::size_t cellCount = width*height;
     constexpr std::size_t bytesize = sizeof(float)*cellCount;

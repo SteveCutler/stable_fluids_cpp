@@ -27,6 +27,10 @@ class MetalGrid
         float m_noiseTimeMult;
         float m_noise_strength;
 
+        // public velocity fields
+        MTL::Buffer* m_u_velocity;
+        MTL::Buffer* m_v_velocity;
+
         //public functions
         void update(float dt);
         void ClearBuffers();
@@ -173,6 +177,7 @@ class MetalGrid
         MTL::ComputePipelineState* m_boundaryDensityKernel;
         MTL::ComputePipelineState* m_boundaryVelocityKernel;
         MTL::ComputePipelineState* m_boundaryPressureKernel;
+
         MTL::ComputePipelineState* m_diffuseVelocityKernel;
         MTL::ComputePipelineState* m_diffuseDensityKernel;
         MTL::ComputePipelineState* m_divergenceKernel;
@@ -202,8 +207,7 @@ class MetalGrid
         MTL::Buffer* m_density_r;
         MTL::Buffer* m_density_g;
         MTL::Buffer* m_density_b;
-        MTL::Buffer* m_u_velocity;
-        MTL::Buffer* m_v_velocity;
+
         MTL::Buffer* m_noiseField;
 
         MTL::Buffer* m_diffusion_scratch_r;
