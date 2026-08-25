@@ -1,8 +1,0 @@
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/fluid_core.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/fluid_metal.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/StableFluidsC++.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/cpu_parity.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/projection_test.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/test.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/edit_cache.dir
-/Users/stevecutler/Documents/UVIC/StableFluidsC++/build-release/CMakeFiles/rebuild_cache.dir

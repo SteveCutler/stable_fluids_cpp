@@ -1,2 +1,4 @@
 build/
+build-profile/
+build-release/
 .DS_Store

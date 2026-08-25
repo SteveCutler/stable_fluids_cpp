@@ -27,7 +27,7 @@ class MetalGrid
         float m_noiseTimeMult;
         float m_noise_strength;
 
-        double m_gpuwaittime;
+        double m_gpuexecutiontime;
         double m_cpuwaittime;
 
         // public velocity fields

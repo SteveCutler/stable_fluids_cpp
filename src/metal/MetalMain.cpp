@@ -219,10 +219,10 @@ int main()
             }
             renderer.update(metalgrid, arrow_viz);
 
-            if(frameCount%10==0){
-                std::cout << "\nGPU wait time: " << metalgrid.m_gpuwaittime << "\n";
-                std::cout << "\nCPU wait time: " << metalgrid.m_cpuwaittime << "\n";
-            }
+            // if(frameCount%10==0){
+            //     std::cout << "\nGPU execution time: " << metalgrid.m_gpuexecutiontime << "\n";
+            //     std::cout << "\nCPU wait time: " << metalgrid.m_cpuwaittime << "\n";
+            // }
 
             frameCount++;
             

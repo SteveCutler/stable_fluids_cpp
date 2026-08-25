@@ -25,7 +25,7 @@ MetalGrid::MetalGrid(
     m_noiseTimeMult(1.f),
     m_noise_strength(2.f),
 
-    m_gpuwaittime(0),
+    m_gpuexecutiontime(0),
     m_cpuwaittime(0),
    
     m_u_velocity(nullptr),
@@ -509,7 +509,7 @@ void MetalGrid::update(float dt){
     const auto waitEnd = std::chrono::steady_clock::now();
 
     //gpu computation time logic
-    m_gpuwaittime = (commandBuffer->GPUEndTime() - commandBuffer->GPUStartTime()) * 1000;
+    m_gpuexecutiontime = (commandBuffer->GPUEndTime() - commandBuffer->GPUStartTime()) * 1000;
     
     //gpu computation time logic
     m_cpuwaittime = std::chrono::duration<double, std::milli>((waitEnd - waitStart)).count();

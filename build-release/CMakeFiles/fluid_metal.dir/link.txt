@@ -1,2 +1,0 @@
-/usr/bin/ar qc libfluid_metal.a CMakeFiles/fluid_metal.dir/src/metal/MetalGrid.cpp.o CMakeFiles/fluid_metal.dir/src/metal/MetalImplementation.cpp.o CMakeFiles/fluid_metal.dir/src/metal/MetalContext.cpp.o CMakeFiles/fluid_metal.dir/src/metal/MetalMain.cpp.o CMakeFiles/fluid_metal.dir/src/metal/MetalRenderer.cpp.o
-/usr/bin/ranlib libfluid_metal.a
