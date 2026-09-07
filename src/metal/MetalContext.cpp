@@ -57,7 +57,6 @@ m_library_name(library){
 
         std::cerr << '\n';
 
-        m_device->release();
         return;
     }
 
@@ -96,7 +95,7 @@ MTL::ComputePipelineState* MetalContext::CreatePipelineState(const std::string& 
     //search for metal function name in library
     MTL::Function* function = m_library->newFunction(functionName);
 
-    functionName->release();
+    // string() returns an autoreleased object; the surrounding pool owns it.
     
    
     if(function == nullptr){

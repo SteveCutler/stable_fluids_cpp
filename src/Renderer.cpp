@@ -79,13 +79,14 @@ m_sprite(m_texture)
 }
 
 void Renderer::update(const Grid& grid, bool arrow_viz){
+    m_renderClock.restart();
     // calc elapsed time
         float elapsed = m_clock.restart().asSeconds();
         
 
         // calculate performance values
         float fps = 1.f / elapsed;
-        float ms = elapsed;
+        float ms = elapsed * 1000.f;
 
 
         // overlay strings
@@ -146,7 +147,7 @@ void Renderer::update(const Grid& grid, bool arrow_viz){
 
         //calc frame render time
         float renderTime = m_renderClock.restart().asMicroseconds()/1000.f;
-        setString(render, "\nRender ms: " + std::to_string(renderTime));
+        setString(render, "\nRender prep ms: " + std::to_string(renderTime));
 
 
 }

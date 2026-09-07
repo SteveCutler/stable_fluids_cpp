@@ -18,6 +18,7 @@ struct DivergenceStats {
 
 class Grid
     {
+        friend struct ScalarBoundaryTestAccess;
 
     public:
         Grid(std::size_t width, std::size_t height, std::vector<Emitter*> emitters, int seed, bool threaded);

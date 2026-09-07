@@ -4,7 +4,7 @@
 
 sf::Font font;
 
-bool loaded = font.openFromFile("./assets/digital-7 (italic).ttf");
+bool loaded = font.openFromFile(FLUID_FONT_PATH);
 
 
 

@@ -14,6 +14,9 @@ class MetalGrid
     public:
         MetalGrid(std::size_t width, std::size_t height, std::size_t cell_count, std::size_t bytesize, std::vector<Emitter*> emitters, int seed, MetalContext& MetalContext);
         ~MetalGrid();
+        MetalGrid(const MetalGrid&) = delete;
+        MetalGrid& operator=(const MetalGrid&) = delete;
+        [[nodiscard]] bool isValid() const { return m_initialized; }
 
         //public member variables
         MTL::Buffer* m_pixels;
@@ -68,6 +71,8 @@ class MetalGrid
         float time_addSource() const;
     
     private:
+
+        bool m_initialized = false;
 
         //kernel encoding functions
         void encodeAdvectVel(MTL::ComputeCommandEncoder* encoder, float dt);

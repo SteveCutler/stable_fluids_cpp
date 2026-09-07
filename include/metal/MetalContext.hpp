@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <Foundation/Foundation.hpp>
 #include <Metal/Metal.hpp>
 
@@ -14,6 +16,8 @@ class MetalContext {
         
         //destructor
         ~MetalContext();
+
+        [[nodiscard]] bool isValid() const { return m_device && m_commandqueue && m_library; }
 
         //getters
         MTL::Device* get_device();

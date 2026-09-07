@@ -177,9 +177,9 @@ void Grid::update(float dt){
     velBoundaries();
 
     //second pressure solve
-    m_performance_clock.restart();
+    sf::Clock projectionClock;
     projectStep();
-    m_project_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
+    m_project_ms = projectionClock.getElapsedTime().asMicroseconds()/1000.f;
    // decayVel();  
 
     //Add density source
@@ -212,7 +212,7 @@ void Grid::update(float dt){
     m_advect_ms = m_performance_clock.restart().asMicroseconds()/1000.f;
 
     //generate pixels
-    gen_pixels_Threaded();
+    m_mult_threaded ? gen_pixels_Threaded() : gen_pixels_Rows(0, m_height);
     
 }
     
@@ -328,7 +328,7 @@ void Grid::scalarBoundaries(std::vector<float>& field){
     field[m_width*(m_height-1)] = (field[m_width*(m_height-1)+1]+field[m_width*(m_height-2)])*.5f;
 
     //bottom right corner
-    field[m_width*m_height-1] = (field[m_width*m_height-2]+field[m_width*m_height-m_width])*.5f;
+    field[m_width*m_height-1] = (field[m_width*m_height-2]+field[m_width*m_height-m_width-1])*.5f;
 }
 
 void Grid::reset_density(){
@@ -783,6 +783,7 @@ void Grid::calcDivergence_Threaded(){
         }
     );
 }
+
 void Grid::calcDivergence_Rows(std::size_t begin, std::size_t end){
 
    

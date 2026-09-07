@@ -117,6 +117,9 @@ int main()
         serialGrid.density_r(),
         threadedGrid.density_r());
 
+    const ErrorStats densityGreen = compareFields(serialGrid.density_g(), threadedGrid.density_g());
+    const ErrorStats densityBlue = compareFields(serialGrid.density_b(), threadedGrid.density_b());
+
     const ErrorStats velocityU = compareFields(
         serialGrid.u_velocity(),
         threadedGrid.u_velocity());
@@ -128,12 +131,18 @@ int main()
     
     //check if tests pass
     const bool passed =
+        densityGreen.allFinite && densityBlue.allFinite &&
+        densityGreen.maximumAbsoluteError <= tolerance &&
+        densityBlue.maximumAbsoluteError <= tolerance &&
         densityRed.allFinite &&
         velocityU.allFinite &&
         velocityV.allFinite &&
         densityRed.maximumAbsoluteError <= tolerance &&
         velocityU.maximumAbsoluteError <= tolerance &&
         velocityV.maximumAbsoluteError <= tolerance;
+
+    std::cout << "Density G: max=" << densityGreen.maximumAbsoluteError << ", rms=" << densityGreen.rmsError << '\n';
+    std::cout << "Density B: max=" << densityBlue.maximumAbsoluteError << ", rms=" << densityBlue.rmsError << '\n';
 
     //output results
     std::cout

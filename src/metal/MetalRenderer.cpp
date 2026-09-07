@@ -85,7 +85,6 @@ void MetalRenderer::update(const MetalGrid& grid, bool arrow_viz){
 
         // calculate performance values
         float fps = 1.f / elapsed;
-        float ms = elapsed;
 
 
         // overlay strings

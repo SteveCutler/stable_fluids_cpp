@@ -93,7 +93,7 @@ bool testDivergentField(bool thread){
 
     bool testZeroField(bool threaded)
 {
-    Grid grid(width, height, emitters, seed, true);
+    Grid grid(width, height, emitters, seed, threaded);
 
     const DivergenceStats before =
         grid.measureDivergence();

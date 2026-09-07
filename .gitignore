@@ -1,4 +1,14 @@
 build/
 build-profile/
 build-release/
+build-xcode/
 .DS_Store
+/build-*/
+/cmake-build-*/
+CMakeUserPresets.json
+/.vscode/
+/.idea/
+*.air
+*.metallib
+*.swp
+*.swo

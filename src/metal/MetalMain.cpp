@@ -15,9 +15,6 @@ int main()
     //Set Seed
     constexpr int seed = 42;
 
-    //frame count
-    std::size_t frameCount = 0;
-
     //SET WIDTH AND HEIGHT
     constexpr unsigned int width = 1024;
     constexpr unsigned int height = 1024;    
@@ -32,12 +29,7 @@ int main()
     bool clear = false;
 
     //autorelease pool
-    NS::AutoreleasePool* pool =
-        NS::AutoreleasePool::alloc()->init();
-
-
-    //mutlithreaded switch
-    bool threaded = true;
+    auto pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 
     //velocity arrow visualization
     bool arrow_viz = false;
@@ -45,7 +37,7 @@ int main()
     
     //Font loading
     sf::Font font;
-    bool loaded = font.openFromFile("./assets/digital-7 (italic).ttf");
+    bool loaded = font.openFromFile(FLUID_FONT_PATH);
 
     if(!loaded){
     std::cerr << "Failed to load font\n";
@@ -64,8 +56,10 @@ int main()
     };
 
     //OBJECT CREATION
-    MetalContext metalcontext{"build/FluidKernels.metallib"};
+    MetalContext metalcontext{FLUID_METALLIB_PATH};
+    if (!metalcontext.isValid()) return EXIT_FAILURE;
     MetalGrid metalgrid{width, height, cellCount, bytesize, emitters, seed, metalcontext};
+    if (!metalgrid.isValid()) return EXIT_FAILURE;
     MetalRenderer renderer(width, height, font);
     // create the window
     sf::RenderWindow window(sf::VideoMode({width, height}), "Wind Sim");
@@ -224,7 +218,6 @@ int main()
             //     std::cout << "\nCPU wait time: " << metalgrid.m_cpuwaittime << "\n";
             // }
 
-            frameCount++;
             
         }
 

@@ -1,3 +1,8 @@
+// Adapted from Joshua Sullivan, SimplexNoiseFilter (MIT).
+// Copyright (c) 2020 Joshua Sullivan
+// Source commit: 091607969586d33f491fe29fca91802ef9ea50db
+// Full notice: docs/third-party/SimplexNoiseFilter-LICENSE.txt
+
 #include <metal_stdlib>
 using namespace metal;
 

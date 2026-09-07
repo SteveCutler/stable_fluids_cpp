@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 #include "Emitter.hpp"
 
 
@@ -24,49 +25,20 @@ MetalGrid::MetalGrid(
     m_noise_freq(0.05f),
     m_noiseTimeMult(1.f),
     m_noise_strength(2.f),
-
     m_gpuexecutiontime(0),
     m_cpuwaittime(0),
-   
     m_u_velocity(nullptr),
     m_v_velocity(nullptr),
-
     m_seed(seed),
     m_width(width),
     m_height(height),
-    m_cellcount(cell_count),
     m_bytesize(bytesize),
+    m_cellcount(cell_count),
     m_metalcontext(MetalContext),
-
     m_vel_decay(0.994f),
     m_source(50.f),
     m_elapsed(0.f),
     m_pressure_iter(20),
-
-    m_thread_count(4),
-
-    m_noise_ms(0.f),
-    m_vel_ms(0.f),
-    m_div_ms(0.f),
-    m_pressure_ms(0.f),
-    m_advect_ms(0.f),
-    m_diffuse_ms(0.f),
-    m_advectVel_ms(0.f),
-    m_project_ms(0.f),
-    m_addSource_ms(0.f),
-    m_render_ms(0.f),
-    m_emitters(emitters),
-
-    m_density_r(nullptr),
-    m_density_g(nullptr),
-    m_density_b(nullptr),
-    m_noiseField(nullptr),
-    m_diffusion_scratch_r(nullptr),
-    m_diffusion_scratch_g(nullptr),
-    m_diffusion_scratch_b(nullptr),
-
-    m_diffusion_iterations{20},
-
     m_advectVelKernel(nullptr),
     m_emitterKernel(nullptr),
     m_pixelKernel(nullptr),
@@ -82,24 +54,38 @@ MetalGrid::MetalGrid(
     m_solvePressureKernel(nullptr),
     m_projectKernel(nullptr),
     m_copyDensityKernel(nullptr),
-
+    m_thread_count(4),
+    m_noise_ms(0.f),
+    m_vel_ms(0.f),
+    m_div_ms(0.f),
+    m_pressure_ms(0.f),
+    m_advect_ms(0.f),
+    m_diffuse_ms(0.f),
+    m_advectVel_ms(0.f),
+    m_project_ms(0.f),
+    m_addSource_ms(0.f),
+    m_render_ms(0.f),
+    m_emitters(emitters),
+    m_density_r(nullptr),
+    m_density_g(nullptr),
+    m_density_b(nullptr),
+    m_noiseField(nullptr),
+    m_diffusion_scratch_r(nullptr),
+    m_diffusion_scratch_g(nullptr),
+    m_diffusion_scratch_b(nullptr),
+    m_diffusion_iterations{20},
     m_density_r_prev(nullptr),
     m_density_g_prev(nullptr),
     m_density_b_prev(nullptr),
     m_u_velocity_prev(nullptr),
     m_v_velocity_prev(nullptr),
-    
     m_divergence(nullptr),
     m_pressure(nullptr),
     m_pressure_prev(nullptr),
-
     m_noise(width*height, 0.0f),
-
-
     m_first_frame(true)
     {
-        //create error object
-         NS::Error* error = nullptr;
+        if (!m_metalcontext.isValid()) return;
 
         // configure reproducible noise generator
         m_noise_gen.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -238,10 +224,6 @@ MetalGrid::MetalGrid(
             m_bytesize,
             MTL::ResourceStorageModeShared
         );
-        m_pressure = m_metalcontext.get_device()->newBuffer(
-            m_bytesize,
-            MTL::ResourceStorageModeShared
-        );
         m_diffusion_scratch_r = m_metalcontext.get_device()->newBuffer(
             m_bytesize,
             MTL::ResourceStorageModeShared
@@ -312,7 +294,6 @@ MetalGrid::MetalGrid(
             m_diffusion_scratch_r == nullptr ||
             m_diffusion_scratch_g == nullptr ||
             m_diffusion_scratch_b == nullptr ||
-            m_pressure == nullptr ||
             m_density_r_prev == nullptr ||
             m_density_g_prev == nullptr || 
             m_density_b_prev == nullptr ||
@@ -325,27 +306,7 @@ MetalGrid::MetalGrid(
                 
                 std::cerr << "Error allocating Metal buffers.\n";
                 
-                //if buffer didn't err out release memory before end
-                if (m_density_r != nullptr) m_density_r->release();
-                if (m_density_g != nullptr) m_density_g->release();
-                if (m_density_b != nullptr) m_density_b->release();
-                if (m_u_velocity != nullptr) m_u_velocity->release();
-                if (m_v_velocity != nullptr) m_v_velocity->release();
-                if (m_noiseField != nullptr) m_noiseField->release();
-                if (m_diffusion_scratch_r != nullptr) m_noiseField->release();
-                if (m_diffusion_scratch_g != nullptr) m_noiseField->release();
-                if (m_diffusion_scratch_b != nullptr) m_noiseField->release();
-                if (m_pressure != nullptr) m_noiseField->release();
-                if (m_density_r_prev != nullptr) m_density_r->release();
-                if (m_density_g_prev != nullptr) m_density_g->release();
-                if (m_density_b_prev != nullptr) m_density_b->release();
-                if (m_u_velocity_prev != nullptr) m_u_velocity->release();
-                if (m_v_velocity_prev != nullptr) m_v_velocity->release();
-                if (m_divergence != nullptr) m_divergence->release();
-                if (m_pressure != nullptr) m_pressure->release();
-                if (m_pressure_prev != nullptr) m_pressure_prev->release();
-                if (m_pixels != nullptr) m_pixels->release();
-                
+                // The destructor owns cleanup, including partially allocated state.
                 return;
             }
             
@@ -359,7 +320,6 @@ MetalGrid::MetalGrid(
         float* ds_r = static_cast<float*>(m_diffusion_scratch_r->contents());
         float* ds_g = static_cast<float*>(m_diffusion_scratch_g->contents());
         float* ds_b = static_cast<float*>(m_diffusion_scratch_b->contents());
-        float* pr = static_cast<float*>(m_pressure->contents());
         float* r_prev = static_cast<float*>(m_density_r_prev->contents());
         float* g_prev = static_cast<float*>(m_density_g_prev->contents());
         float* b_prev = static_cast<float*>(m_density_b_prev->contents());
@@ -380,7 +340,6 @@ MetalGrid::MetalGrid(
         std::fill_n(ds_r,m_cellcount,0.f);
         std::fill_n(ds_g,m_cellcount,0.f);
         std::fill_n(ds_b,m_cellcount,0.f);
-        std::fill_n(pr,m_cellcount,0.f);
         std::fill_n(r_prev,m_cellcount,0.f);
         std::fill_n(g_prev,m_cellcount,0.f);
         std::fill_n(b_prev,m_cellcount,0.f);
@@ -390,12 +349,14 @@ MetalGrid::MetalGrid(
         std::fill_n(pres,m_cellcount,0.f);
         std::fill_n(pres_prev,m_cellcount,0.f);
         std::fill_n(p,m_cellcount*4,0u);
+        m_initialized = true;
             
        
 
     };
 
 void MetalGrid::update(float dt){
+    if (!m_initialized) return;
 
     m_elapsed += dt;
 
@@ -406,6 +367,14 @@ void MetalGrid::update(float dt){
         return;
     }
 
+    //Command buffer label
+    commandBuffer->setLabel(
+        NS::String::string(
+            "Fluid Simulation Update",
+            NS::UTF8StringEncoding
+        )
+    );
+
     MTL::ComputeCommandEncoder* encoder = commandBuffer->computeCommandEncoder();
 
     if (encoder == nullptr) {
@@ -413,74 +382,86 @@ void MetalGrid::update(float dt){
         return;
     }
 
-    //kernel order for CPU match
-    /*
-    calc noise
-    calc vel
-    swap vel
-    advect vel
-    vel boundaries
-    swap vel
-    diffuse vel
-    vel boundaries
-    project step
-    add source
-    swap density
-    diffuse density
-    swap density
-    advect density
-    density boundaries
-    */
+    //Group helper
+
+    auto pushGroup = [&](const char* name) {
+        encoder->pushDebugGroup(
+            NS::String::string(
+                name,
+                NS::UTF8StringEncoding
+            )
+        );
+    };
 
     //create noise field
+    pushGroup("Noise Field Generation");
     encodeNoiseField(encoder, m_elapsed);
+    encoder->popDebugGroup();
 
     //create curl vel field
+    pushGroup("Vel Field Generation");
     encodeVelField(encoder, dt);
+    encoder->popDebugGroup();
 
     //swap for advection input
     std::swap(m_u_velocity,m_u_velocity_prev);
     std::swap(m_v_velocity,m_v_velocity_prev);
     
     //encode advect vel
+    pushGroup("Vel Field Advection");
     encodeAdvectVel(encoder, dt);
+    encoder->popDebugGroup();
 
     //encode velocity boundaries
+
     encodeBoundaryVelocity(encoder);
     
     std::swap(m_u_velocity,m_u_velocity_prev);
     std::swap(m_v_velocity,m_v_velocity_prev);
     
     //diffuse velocity
+    pushGroup("Vel Diffusion");
     encodeDiffuseVelocity(encoder, dt);
+    encoder->popDebugGroup();
     
     //encode boundary velocity
     encodeBoundaryVelocity(encoder);
 
     //compute divergence
+    pushGroup("Compute Divergence");
     encodeComputeDivergence(encoder);
+    encoder->popDebugGroup();
 
     //compute Pressure
+    pushGroup("Pressure Solver");
     solvePressureHelper(encoder);
+    encoder->popDebugGroup();
 
     encodeBoundaryPressure(encoder);
 
+    pushGroup("Pressure Projection");
     encodeProjectPressure(encoder);
+    encoder->popDebugGroup();
 
     encodeBoundaryVelocity(encoder);
 
 
     
     //encode emitter kernel
+    pushGroup("Source Emitters");
     for(auto& emitter : m_emitters){
         encodeEmitter(encoder, emitter);
     }
+    encoder->popDebugGroup();
+
     //swapping buffers to prepare for density advection
     std::swap(m_density_r, m_density_r_prev);
     std::swap(m_density_g, m_density_g_prev);
     std::swap(m_density_b, m_density_b_prev);
 
+    pushGroup("Density Diffusion");
     densityDiffusionHelper(encoder, dt);
+    encoder->popDebugGroup();
 
     std::swap(m_density_r, m_density_r_prev);
     std::swap(m_density_g, m_density_g_prev);
@@ -488,13 +469,17 @@ void MetalGrid::update(float dt){
 
     
     //encode density advection
+    pushGroup("Density Advection");
     encodeDensityAdvection(encoder, dt);
+    encoder->popDebugGroup();
 
     //density boundary
     encodeBoundaryDensity(encoder);
    
     //encode pixels
+    pushGroup("Pixel Generation");
     encodePixels(encoder);
+    encoder->popDebugGroup();
 
 
     //end encoding for kernel
@@ -532,6 +517,7 @@ void MetalGrid::update(float dt){
 
 //clear buffers
 void MetalGrid::ClearBuffers(){
+    if (!m_initialized) return;
     MTL::CommandBuffer* commandBuffer = m_metalcontext.get_commandqueue()->commandBuffer();
 
     if(commandBuffer == nullptr){
@@ -1250,7 +1236,6 @@ void MetalGrid::encodeBoundaryDensity(MTL::ComputeCommandEncoder* encoder){
 
     std::uint32_t width = static_cast<std::uint32_t>(m_width);
     std::uint32_t height = static_cast<std::uint32_t>(m_height);
-    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
     
 
     encoder->setBytes(&width,
@@ -1284,7 +1269,6 @@ void MetalGrid::encodeBoundaryVelocity(MTL::ComputeCommandEncoder* encoder){
 
     std::uint32_t width = static_cast<std::uint32_t>(m_width);
     std::uint32_t height = static_cast<std::uint32_t>(m_height);
-    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
     
 
     encoder->setBytes(&width,
@@ -1318,7 +1302,6 @@ void MetalGrid::encodeBoundaryPressure(MTL::ComputeCommandEncoder* encoder){
 
     std::uint32_t width = static_cast<std::uint32_t>(m_width);
     std::uint32_t height = static_cast<std::uint32_t>(m_height);
-    std::uint32_t total = static_cast<std::uint32_t>(m_cellcount);
     
 
     encoder->setBytes(&width,
@@ -1392,6 +1375,7 @@ void MetalGrid::solvePressureHelper(MTL::ComputeCommandEncoder* encoder){
 
 std::span<const std::uint8_t> MetalGrid::get_pixels() const
 {
+    if (!m_initialized) return {};
     auto* pixels =  static_cast<const std::uint8_t*>(
         m_pixels->contents()
     );
@@ -1402,28 +1386,37 @@ std::span<const std::uint8_t> MetalGrid::get_pixels() const
 
 MetalGrid::~MetalGrid()
 {
-    if (m_density_r != nullptr) m_density_r->release();
-    if (m_density_g != nullptr) m_density_g->release();
-    if (m_density_b != nullptr) m_density_b->release();
-    if (m_u_velocity != nullptr) m_u_velocity->release();
-    if (m_v_velocity != nullptr) m_v_velocity->release();
-    if (m_noiseField != nullptr) m_noiseField->release();
-    if (m_diffusion_scratch_r != nullptr) m_noiseField->release();
-    if (m_diffusion_scratch_g != nullptr) m_noiseField->release();
-    if (m_diffusion_scratch_b != nullptr) m_noiseField->release();
-    if (m_pressure != nullptr) m_noiseField->release();
-    if (m_density_r_prev != nullptr) m_density_r->release();
-    if (m_density_g_prev != nullptr) m_density_g->release();
-    if (m_density_b_prev != nullptr) m_density_b->release();
-    if (m_u_velocity_prev != nullptr) m_u_velocity->release();
-    if (m_v_velocity_prev != nullptr) m_v_velocity->release();
-    if (m_divergence != nullptr) m_divergence->release();
-    if (m_pressure != nullptr) m_pressure->release();
-    if (m_pressure_prev != nullptr) m_pressure_prev->release();
-    if (m_pixels != nullptr) m_pixels->release();
-
-
-
-    std::cout << "Metal grid destroyed and resources released" << std::endl;
-
+    if (m_pixels) m_pixels->release();
+    if (m_u_velocity) m_u_velocity->release();
+    if (m_v_velocity) m_v_velocity->release();
+    if (m_advectVelKernel) m_advectVelKernel->release();
+    if (m_emitterKernel) m_emitterKernel->release();
+    if (m_pixelKernel) m_pixelKernel->release();
+    if (m_advectKernel) m_advectKernel->release();
+    if (m_computeNoiseKernel) m_computeNoiseKernel->release();
+    if (m_velFieldKernel) m_velFieldKernel->release();
+    if (m_boundaryDensityKernel) m_boundaryDensityKernel->release();
+    if (m_boundaryVelocityKernel) m_boundaryVelocityKernel->release();
+    if (m_boundaryPressureKernel) m_boundaryPressureKernel->release();
+    if (m_diffuseVelocityKernel) m_diffuseVelocityKernel->release();
+    if (m_diffuseDensityKernel) m_diffuseDensityKernel->release();
+    if (m_divergenceKernel) m_divergenceKernel->release();
+    if (m_solvePressureKernel) m_solvePressureKernel->release();
+    if (m_projectKernel) m_projectKernel->release();
+    if (m_copyDensityKernel) m_copyDensityKernel->release();
+    if (m_density_r) m_density_r->release();
+    if (m_density_g) m_density_g->release();
+    if (m_density_b) m_density_b->release();
+    if (m_noiseField) m_noiseField->release();
+    if (m_diffusion_scratch_r) m_diffusion_scratch_r->release();
+    if (m_diffusion_scratch_g) m_diffusion_scratch_g->release();
+    if (m_diffusion_scratch_b) m_diffusion_scratch_b->release();
+    if (m_density_r_prev) m_density_r_prev->release();
+    if (m_density_g_prev) m_density_g_prev->release();
+    if (m_density_b_prev) m_density_b_prev->release();
+    if (m_u_velocity_prev) m_u_velocity_prev->release();
+    if (m_v_velocity_prev) m_v_velocity_prev->release();
+    if (m_divergence) m_divergence->release();
+    if (m_pressure) m_pressure->release();
+    if (m_pressure_prev) m_pressure_prev->release();
 }
